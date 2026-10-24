@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototype Fidelity Explorer</title>
+<meta name="description" content="EGN 475 Week 1 interactive: move one feature from paper sketch to working Flask prototype and learn when each level of fidelity fits.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .scen{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+  .scen .btn[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .stepper{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+  .step{font:inherit;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;min-width:0}
+  .step .n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#EEF1F5;font-size:13px;font-weight:700;margin-right:6px}
+  .step .t{font-weight:600;font-size:14px}
+  .step[aria-current=true]{border-color:var(--au-red);background:var(--au-red-soft)}
+  .step[aria-current=true] .n{background:var(--au-red);color:#fff}
+  @media(max-width:640px){.stepper{grid-template-columns:repeat(2,1fr)}}
+  .range-row{display:flex;align-items:center;gap:12px;margin:4px 0 16px}
+  .range-row input{flex:1;accent-color:var(--au-red)}
+  .range-row span{font-size:13px;color:var(--muted);white-space:nowrap}
+  .stage{min-height:420px;display:flex;align-items:center;justify-content:center;background:#FAFAFB;border:1px dashed #D5DAE1;border-radius:12px;padding:16px;overflow:hidden}
+  .phone{width:100%;max-width:300px;border-radius:24px;border:8px solid #1F2937;background:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+  .phone .bar{height:20px;background:#1F2937}
+  .phone .scr{padding:12px;min-height:360px;font-size:14px}
+  /* paper */
+  .paper{width:100%;max-width:320px;background:#FFFDF5;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.12);padding:6px;transform:rotate(-1.2deg)}
+  .paper svg{width:100%;height:auto;display:block}
+  .paper text{font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive;fill:#374151}
+  /* wireframe */
+  .wf{font-family:var(--mono);color:#4B5563}
+  .wf .box{border:2px solid #9CA3AF;border-radius:6px;padding:8px;margin-bottom:8px;background:#fff}
+  .wf .ph{background:repeating-linear-gradient(45deg,#E5E7EB 0 6px,#F3F4F6 6px 12px);border:2px solid #9CA3AF;border-radius:6px;height:56px;margin-bottom:8px;display:grid;place-items:center;font-size:12px}
+  .wf .row{display:flex;justify-content:space-between;align-items:center;gap:6px;border-bottom:1px dashed #C4C9D0;padding:6px 0;font-size:12px}
+  .wf .b{border:2px solid #6B7280;border-radius:6px;padding:4px 8px;font-size:12px;text-align:center}
+  .wf .note{font-size:11px;color:#9CA3AF;margin-top:6px}
+  /* mockup */
+  .mk h4{margin:0 0 8px;font-size:16px}
+  .mk .item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #EEF0F3}
+  .mk .item small{color:var(--muted);display:block}
+  .mk .add{font:inherit;font-size:13px;font-weight:600;background:#B45309;color:#fff;border:0;border-radius:6px;padding:5px 10px;cursor:pointer}
+  .mk .cta{font:inherit;width:100%;margin-top:12px;background:#B45309;color:#fff;border:0;border-radius:8px;padding:10px;font-weight:700;cursor:pointer}
+  .mk .banner{background:#FEF4E6;color:#7C2D12;font-size:12px;border-radius:6px;padding:6px 8px;margin-bottom:8px}
+  .mk.salon .add,.mk.salon .cta{background:#7C3AED}
+  .mk.salon .banner{background:#F3E8FF;color:#4C1D95}
+  /* working */
+  .work{width:100%;display:grid;gap:12px}
+  @media(min-width:700px){.work{grid-template-columns:1fr 1fr}}
+  .work .pane{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px;min-width:0}
+  .work h4{margin:0 0 8px;font-size:15px}
+  .work .item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #EEF0F3}
+  .work .qty{width:58px}
+  .work .total{font-weight:700;margin-top:8px}
+  .order{border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px}
+  .st{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#EEF1F5}
+  .st.s0{background:#EEF4FF;color:#1E3A8A}.st.s1{background:#FEF4E6;color:#7C2D12}.st.s2{background:#E7F6EC;color:#14532D}.st.s3{background:#E5E7EB;color:#374151}
+  .facts dl{margin:0}
+  .facts dt{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:12px}
+  .facts dd{margin:2px 0 0}
+  .meter{margin-top:10px}
+  .meter label{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2)}
+  .meter .track{height:8px;background:#EEF1F5;border-radius:999px;overflow:hidden}
+  .meter .fill{height:100%;background:var(--au-red);border-radius:999px;width:0}
+  .twocol{display:grid;gap:16px}
+  @media(min-width:760px){.twocol{grid-template-columns:1fr 1fr}}
+  .q{border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:12px}
+  .q p{margin:0 0 10px;font-weight:500}
+  .opts{display:flex;flex-wrap:wrap;gap:8px}
+  .opts .btn.right{background:var(--ok-soft);border-color:#86D19F;color:#14532D}
+  .opts .btn.wrong{background:var(--bad-soft);border-color:#F1A7A7;color:#7F1D1D}
+  .code-mini{font-family:var(--mono);font-size:12px;background:var(--code-bg);color:var(--code-ink);border-radius:8px;padding:10px;white-space:pre;overflow:auto;margin-top:8px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 1 · Interactive A</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 1 · Explorer</span>
+    <h1>Prototype fidelity explorer</h1>
+    <p class="lede">Follow one feature from a pencil sketch to a working app. At each level, see what it costs to build, what it can teach you, and when it is the right choice for a client.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol>
+      <li>Pick a client: Café Calle Ocho (place an order) or Bella Vista Salon (book an appointment).</li>
+      <li>Move through the four fidelity levels with the buttons or the slider.</li>
+      <li>Try the preview at each level. From the clickable mockup on, you can actually click.</li>
+      <li>Read the facts card: time, cost of change, what you learn, and when to use it.</li>
+      <li>Finish with the "which fidelity fits?" check at the bottom.</li>
+    </ol>
+  </details>
+
+  <div class="scen" role="group" aria-label="Choose a client">
+    <button class="btn" id="scCafe" aria-pressed="true">Option A: Café Calle Ocho</button>
+    <button class="btn" id="scSalon" aria-pressed="false">Option B: Bella Vista Salon</button>
+  </div>
+
+  <div class="stepper" id="stepper" role="tablist" aria-label="Fidelity levels"></div>
+  <div class="range-row">
+    <span>Low fidelity</span>
+    <input type="range" id="lvl" min="0" max="3" step="1" value="0" aria-label="Fidelity level">
+    <span>High fidelity</span>
+  </div>
+
+  <div class="grid two">
+    <section class="card">
+      <h2 id="stageTitle">Paper sketch</h2>
+      <div class="stage" id="stage" aria-live="polite"></div>
+    </section>
+    <aside class="card facts">
+      <h2>What this level gives you</h2>
+      <div class="meter"><label><span>Effort to build</span><span id="mEffortT"></span></label><div class="track"><div class="fill" id="mEffort"></div></div></div>
+      <div class="meter"><label><span>Realism for users</span><span id="mRealT"></span></label><div class="track"><div class="fill" id="mReal"></div></div></div>
+      <div class="meter"><label><span>Cost to change your mind</span><span id="mChangeT"></span></label><div class="track"><div class="fill" id="mChange"></div></div></div>
+      <dl id="facts"></dl>
+    </aside>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Throwaway or evolutionary?</h2>
+    <div class="twocol">
+      <div>
+        <h3>Throwaway prototype</h3>
+        <p style="margin:0">Built only to learn, then discarded. Paper sketches, wireframes and most clickable mockups are throwaway: you keep the lessons, not the artifact. They are cheap, so throwing them away is fine.</p>
+      </div>
+      <div>
+        <h3>Evolutionary prototype</h3>
+        <p style="margin:0">Built to grow into the real product. The Flask app you build in this course is evolutionary: every week you add one working feature to the same code, and by Week 8 it is deployed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Which fidelity fits?</h2>
+    <p style="margin:0">Read each situation and pick the level you would build first.</p>
+    <div id="quiz"></div>
+    <div class="score" style="margin-top:14px"><span>Your score</span><span class="big" id="qScore">0</span><span id="qOf"></span></div>
+    <div id="qEnd"></div>
+  </section>
+</main>
+
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+
+<script>
+const hasGSAP = typeof window.gsap !== "undefined";
+const LEVELS = [
+  {name:"Paper sketch", effort:10, real:15, change:5, effortT:"Minutes", realT:"Very low", changeT:"Almost free",
+   facts:{"Time to build":"5 to 15 minutes with pencil and paper.","What you can learn":"Which screens exist, what goes on each one, and whether the client agrees with the basic idea.","What you cannot learn":"Whether the layout works on a real screen, or whether the data rules make sense.","Use it when":"You are still exploring ideas, talking with a client, or comparing several layouts quickly.","Tools":"Paper, a whiteboard, sticky notes."}},
+  {name:"Wireframe", effort:28, real:35, change:15, effortT:"An hour or two", realT:"Low", changeT:"Cheap",
+   facts:{"Time to build":"About an hour per few screens.","What you can learn":"Where every field, button and list sits, and how screens connect.","What you cannot learn":"How it feels to use, colors, real content length, real behavior.","Use it when":"The idea is agreed and you need a precise layout to build from. Wireframes become your Copilot prompts in Week 2.","Tools":"Excalidraw, Figma, or neat paper drawings."}},
+  {name:"Clickable mockup", effort:50, real:65, change:40, effortT:"A few hours", realT:"Medium", changeT:"Moderate",
+   facts:{"Time to build":"A few hours. Static HTML pages linked together, often drafted with Copilot.","What you can learn":"Whether people understand the flow and find the buttons. Good for early usability tests.","What you cannot learn":"Anything about data: nothing is saved, totals are fake, two users never see each other's changes.","Use it when":"You want users or the client to click through the flow before you write server code.","Tools":"HTML and CSS (Pico CSS), Figma prototypes."}},
+  {name:"Working prototype", effort:85, real:90, change:75, effortT:"Days to weeks", realT:"High", changeT:"Expensive",
+   facts:{"Time to build":"Days to weeks, one feature at a time. This is what you build in EGN 475 with Flask and SQLite.","What you can learn":"Whether the whole idea works with real data, real users and real rules (totals, statuses, logins, double bookings).","What you cannot learn":"How it behaves with thousands of users or in production. It is still a prototype, not a finished product.","Use it when":"The flow is validated and you need to test real behavior, or the prototype will evolve into the product.","Tools":"Python, Flask, SQLite, GitHub Copilot, GitHub."}}
+];
+let lvl = 0, scen = "cafe", cart = {}, orders = [], nextId = 101, mockScreen = 0;
+const DATA = {
+  cafe:{title:"Place an order", items:[["Café con leche",350,"Hot drinks"],["Cuban toast",275,"Bakery"],["Croquetas (3)",425,"Snacks"],["Pastelito de guayaba",195,"Bakery"]],
+        statuses:["received","preparing","ready","picked up"], noun:"order", board:"Kitchen board"},
+  salon:{title:"Book an appointment", items:[["Haircut",3500,"45 min"],["Color",8500,"90 min"],["Blowout",3000,"30 min"],["Manicure",2500,"40 min"]],
+        statuses:["requested","confirmed","completed","canceled"], noun:"appointment", board:"Staff calendar"}
+};
+const money = c => "$" + (c/100).toFixed(2);
+const $ = id => document.getElementById(id);
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+function buildStepper(){
+  $("stepper").innerHTML = LEVELS.map((l,i)=>`<button class="step" role="tab" data-i="${i}" aria-current="${i===lvl}"><span class="n">${i+1}</span><span class="t">${l.name}</span></button>`).join("");
+  $("stepper").querySelectorAll(".step").forEach(b=>b.onclick=()=>setLevel(+b.dataset.i));
+}
+function paperSVG(){
+  const d = DATA[scen];
+  const lines = d.items.map((it,i)=>`<path d="M22 ${118+i*44} q60 -3 120 1 t110 -1" stroke="#6B7280" fill="none" stroke-width="1.6"/><text x="26" y="${110+i*44}" font-size="15">${esc(it[0])}</text><rect x="232" y="${92+i*44}" width="46" height="22" rx="5" fill="none" stroke="#374151" stroke-width="1.6" transform="rotate(${i%2?2:-2} 255 ${103+i*44})"/><text x="240" y="${108+i*44}" font-size="13">${scen==="cafe"?"add":"pick"}</text>`).join("");
+  return `<div class="paper"><svg viewBox="0 0 300 380" role="img" aria-label="Hand drawn sketch of the ${esc(d.title)} screen">
+    <path d="M14 14 q140 -4 272 2 l-2 352 q-136 4 -270 -2 z" fill="none" stroke="#374151" stroke-width="2"/>
+    <text x="26" y="50" font-size="20">${scen==="cafe"?"Café Calle Ocho":"Bella Vista Salon"}</text>
+    <text x="26" y="74" font-size="14">${esc(d.title)}?</text>${lines}
+    <rect x="40" y="300" width="220" height="40" rx="8" fill="none" stroke="#374151" stroke-width="2" transform="rotate(-1 150 320)"/>
+    <text x="96" y="326" font-size="16">${scen==="cafe"?"Place order":"Book it"}</text>
+    <text x="196" y="364" font-size="11" fill="#9CA3AF">total here?</text></svg></div>`;
+}
+function wireframe(){
+  const d = DATA[scen];
+  const rows = d.items.map(it=>`<div class="row"><span>[ item name ]<br><span style="color:#9CA3AF">[ ${scen==="cafe"?"price":"time, price"} ]</span></span><span class="b">${scen==="cafe"?"[ qty ] Add":"Select"}</span></div>`).join("");
+  return `<div class="phone"><div class="bar"></div><div class="scr wf">
+    <div class="box">[ logo ]&nbsp;&nbsp; ${scen==="cafe"?"Menu | My orders | Login":"Services | My bookings | Login"}</div>
+    <div class="ph">[ header image ]</div>
+    <div class="box"><b>${esc(d.title)}</b>${rows}</div>
+    ${scen==="salon"?'<div class="box">[ date picker ] [ time slots ]</div>':'<div class="box">[ notes for the kitchen ]</div>'}
+    <div class="b" style="padding:8px">[ ${scen==="cafe"?"Place order":"Request booking"} ] (total shown above)</div>
+    <div class="note">Gray boxes only. No colors, no real data, no behavior.</div></div></div>`;
+}
+function mockup(){
+  const d = DATA[scen];
+  let inner;
+  if (mockScreen===0){
+    inner = `<div class="banner">Clickable mockup: nothing is saved.</div><h4>${esc(d.title)}</h4>` +
+      d.items.map((it,i)=>`<div class="item"><span>${esc(it[0])}<small>${esc(it[2])} · ${money(it[1])}</small></span><button class="add" data-go="1">${scen==="cafe"?"Add":"Select"}</button></div>`).join("") ;
+  } else if (mockScreen===1){
+    inner = `<div class="banner">Same fake data every time, whatever you clicked.</div><h4>${scen==="cafe"?"Your order":"Confirm your booking"}</h4>
+      <div class="item"><span>${esc(d.items[0][0])}<small>${scen==="cafe"?"Quantity 1":"Friday 10:00 AM"}</small></span><span>${money(d.items[0][1])}</span></div>
+      <div class="item"><span><b>Total</b></span><b>${money(d.items[0][1])}</b></div>
+      <button class="cta" data-go="2">${scen==="cafe"?"Place order":"Request booking"}</button>
+      <button class="add" data-go="0" style="margin-top:8px;background:#6B7280">Back</button>`;
+  } else {
+    inner = `<div class="banner">Looks real, but no ${d.noun} was created.</div><h4>Thank you!</h4><p style="margin:0 0 8px">Your ${d.noun} #100 was ${scen==="cafe"?"received":"requested"}.</p>
+      <p style="margin:0;color:#6B7280;font-size:13px">Open this page twice and you get the same number. Staff never see it.</p>
+      <button class="cta" data-go="0">Start again</button>`;
+  }
+  return `<div class="phone"><div class="bar"></div><div class="scr mk ${scen}">${inner}</div></div>`;
+}
+function working(){
+  const d = DATA[scen];
+  let total = 0;
+  const rows = d.items.map((it,i)=>{
+    const q = cart[i]||0; total += q*it[1];
+    return scen==="cafe"
+      ? `<div class="item"><span>${esc(it[0])}<br><small style="color:var(--muted)">${money(it[1])}</small></span><input class="qty" type="number" min="0" max="9" value="${q}" data-i="${i}" aria-label="Quantity of ${esc(it[0])}"></div>`
+      : `<div class="item"><label style="display:flex;gap:8px;align-items:center"><input type="radio" name="svc" value="${i}" ${cart.svc==i?"checked":""}> ${esc(it[0])}</label><small style="color:var(--muted)">${esc(it[2])} · ${money(it[1])}</small></div>`;
+  }).join("");
+  if (scen==="salon" && cart.svc!=null) total = d.items[cart.svc][1];
+  const extra = scen==="salon" ? `<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><select id="wDay" aria-label="Day"><option>Thu</option><option>Fri</option><option>Sat</option></select><select id="wTime" aria-label="Time"><option>10:00</option><option>11:00</option><option>14:00</option></select></div>` : "";
+  const list = orders.length ? orders.map(o=>`<div class="order"><b>#${o.id}</b> ${esc(o.who)} <span class="st s${o.s}">${d.statuses[o.s]}</span><div style="font-size:13px;color:var(--ink-2)">${esc(o.text)}</div>${o.s<2?`<button class="btn" style="margin-top:6px;padding:4px 10px" data-adv="${o.id}">Move to ${d.statuses[o.s+1]}</button>`:""}</div>`).join("") : `<p style="color:var(--muted);margin:0">No ${d.noun}s yet. Create one on the left.</p>`;
+  const code = scen==="cafe"
+? `@app.route("/orders", methods=["POST"])
+def place_order():
+    db = get_db()
+    db.execute("INSERT INTO orders (customer_name, status) VALUES (?, ?)",
+               (name, "received"))
+    db.commit()
+    return redirect(url_for("menu"))`
+: `@app.route("/appointments", methods=["POST"])
+def book():
+    db = get_db()
+    db.execute("INSERT INTO appointments (service_id, date, time, status) VALUES (?, ?, ?, ?)",
+               (service_id, day, time, "requested"))
+    db.commit()
+    return redirect(url_for("services"))`;
+  return `<div class="work">
+    <div class="pane"><h4>${esc(d.title)}</h4>${rows}${extra}
+      <div class="total" id="wTotal">Total: ${money(total)}</div>
+      <button class="btn primary" id="wPlace" style="margin-top:8px;width:100%">${scen==="cafe"?"Place order":"Request booking"}</button>
+      <div id="wMsg" style="font-size:13px;margin-top:6px;color:var(--bad)"></div></div>
+    <div class="pane"><h4>${d.board} (staff view)</h4><div id="wList">${list}</div></div>
+    <div class="pane" style="grid-column:1/-1"><h4>The Flask code behind the button (simplified)</h4><div class="code-mini">${esc(code)}</div>
+      <p style="margin:8px 0 0;font-size:13px;color:var(--ink-2)">Here the "database" lives in this page, so a reload clears it. In your Flask app the data is stored in SQLite and every user sees the same ${d.noun}s.</p></div></div>`;
+}
+function bindStage(){
+  const st = $("stage");
+  st.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{mockScreen=+b.dataset.go; render(false);});
+  st.querySelectorAll(".qty").forEach(inp=>inp.oninput=()=>{const v=Math.max(0,Math.min(9,parseInt(inp.value)||0)); cart[inp.dataset.i]=v; updateTotal();});
+  st.querySelectorAll("input[name=svc]").forEach(r=>r.onchange=()=>{cart.svc=+r.value; updateTotal();});
+  const place = $("wPlace");
+  if (place) place.onclick = placeOrder;
+  st.querySelectorAll("[data-adv]").forEach(b=>b.onclick=()=>{const o=orders.find(x=>x.id==b.dataset.adv); if(o&&o.s<2){o.s++; render(false);}});
+}
+function updateTotal(){
+  const d = DATA[scen]; let t=0;
+  if (scen==="cafe") d.items.forEach((it,i)=>t+=(cart[i]||0)*it[1]); else if (cart.svc!=null) t=d.items[cart.svc][1];
+  $("wTotal").textContent = "Total: " + money(t);
+}
+function placeOrder(){
+  const d = DATA[scen];
+  if (scen==="cafe"){
+    const parts = d.items.map((it,i)=>cart[i]?`${cart[i]} x ${it[0]}`:null).filter(Boolean);
+    if (!parts.length){ $("wMsg").textContent = "Add at least one item. A real prototype can check rules like this."; return; }
+    const total = d.items.reduce((s,it,i)=>s+(cart[i]||0)*it[1],0);
+    orders.unshift({id:nextId++, who:"Walk-in customer", text:parts.join(", ")+" · "+money(total), s:0});
+  } else {
+    if (cart.svc==null){ $("wMsg").textContent = "Choose a service first."; return; }
+    const day=$("wDay").value, time=$("wTime").value;
+    if (orders.some(o=>o.slot===day+time && o.s<3)){ $("wMsg").textContent = `${day} at ${time} is already booked. Only a working prototype can test a rule like this.`; return; }
+    orders.unshift({id:nextId++, who:"New client", text:`${d.items[cart.svc][0]} · ${day} ${time} · ${money(d.items[cart.svc][1])}`, slot:day+time, s:0});
+  }
+  cart = {}; render(false);
+}
+function render(animate=true){
+  const L = LEVELS[lvl];
+  $("stageTitle").textContent = L.name;
+  $("stage").innerHTML = [paperSVG, wireframe, mockup, working][lvl]();
+  bindStage();
+  $("facts").innerHTML = Object.entries(L.facts).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("");
+  [["mEffort",L.effort,L.effortT],["mReal",L.real,L.realT],["mChange",L.change,L.changeT]].forEach(([id,v,t])=>{
+    $(id+"T").textContent = t;
+    if (hasGSAP && animate) gsap.to("#"+id,{width:v+"%",duration:.6,ease:"power2.out"}); else $(id).style.width = v+"%";
+  });
+  if (hasGSAP && animate) gsap.fromTo("#stage > *",{opacity:0,y:12},{opacity:1,y:0,duration:.4});
+}
+function setLevel(i){
+  lvl = i; mockScreen = 0; $("lvl").value = i;
+  $("stepper").querySelectorAll(".step").forEach((b,j)=>b.setAttribute("aria-current", j===i));
+  render();
+}
+$("lvl").addEventListener("input", e=>setLevel(+e.target.value));
+function setScen(s){ scen=s; cart={}; orders=[]; mockScreen=0; $("scCafe").setAttribute("aria-pressed",s==="cafe"); $("scSalon").setAttribute("aria-pressed",s==="salon"); render(); }
+$("scCafe").onclick=()=>setScen("cafe"); $("scSalon").onclick=()=>setScen("salon");
+
+/* quiz */
+const Q = [
+  ["You have 15 minutes before meeting the café owner and want to agree on which screens the app needs.",0,"A paper sketch is fast enough to make during the meeting and easy to change while the owner watches."],
+  ["The salon owner wants to see exactly where each field and button goes on the booking screen, but colors can wait.",1,"A wireframe fixes the layout precisely without spending time on colors or code."],
+  ["The café owner wants to click through the ordering flow on her phone before you write any server code.",2,"A clickable mockup lets people tap through the flow even though nothing is saved."],
+  ["You need to know whether staff see new orders on the kitchen board while customers keep ordering.",3,"Only a working prototype has real shared data, so only it can show orders moving between users."],
+  ["You are comparing five different layouts for the services screen and expect to throw most of them away.",0,"Paper is the cheapest way to explore many ideas you plan to discard."],
+  ["You must check that two clients can never book the same stylist at the same time.",3,"That is a data rule. Mockups always look fine; only real code with a database can test it."],
+  ["You want to watch whether first-time users can find the Book button on a styled screen. No backend is needed yet.",2,"A clickable mockup is realistic enough for a usability test of navigation and labels."]
+];
+let qScore = 0, answered = 0;
+function buildQuiz(){
+  $("quiz").innerHTML = Q.map((q,i)=>`<div class="q" id="q${i}"><p>${i+1}. ${q[0]}</p><div class="opts">${LEVELS.map((l,j)=>`<button class="btn" data-q="${i}" data-a="${j}">${l.name}</button>`).join("")}</div><div class="fb"></div></div>`).join("");
+  $("qOf").textContent = "out of " + Q.length;
+  $("quiz").querySelectorAll("button").forEach(b=>b.onclick=()=>answer(+b.dataset.q,+b.dataset.a));
+}
+function answer(i,a){
+  const box = $("q"+i); if (box.dataset.done) return; box.dataset.done = "1";
+  const ok = a===Q[i][1];
+  box.querySelectorAll("button").forEach(b=>{b.disabled=true; const j=+b.dataset.a; if(j===Q[i][1]) b.classList.add("right"); else if(j===a) b.classList.add("wrong");});
+  box.querySelector(".fb").innerHTML = `<div class="feedback ${ok?"ok":"bad"}">${ok?"Correct.":"Not quite. Best choice: "+LEVELS[Q[i][1]].name+"."} ${Q[i][2]}</div>`;
+  if (ok) qScore++; answered++;
+  $("qScore").textContent = qScore;
+  if (answered===Q.length) $("qEnd").innerHTML = `<div class="feedback info">You scored ${qScore} of ${Q.length}. ${qScore>=6?"Strong judgment: you are ready to pick the right prototype for each question a client asks.":"Review the facts card for each level, then reload the page and try again."}</div>`;
+}
+buildStepper(); buildQuiz(); render();
+</script>
+</body>
+</html>

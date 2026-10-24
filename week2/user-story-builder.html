@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User Story Builder</title>
+<meta name="description" content="EGN 475 Week 2 interactive: write user stories with acceptance criteria and get live INVEST feedback.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .presets{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+  .fld{margin-bottom:12px}
+  .fld label{display:block;font-weight:600;font-size:14px;margin-bottom:4px}
+  .fld .help{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .fld input[type=text],.fld textarea,.fld select{width:100%}
+  textarea{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;resize:vertical;min-height:64px}
+  .pre{display:inline-block;font-family:var(--mono);font-size:12px;color:var(--muted);margin-right:6px}
+  .ac{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;background:#FAFAFB}
+  .ac .row{display:grid;grid-template-columns:62px 1fr;gap:6px;align-items:center;margin-bottom:6px}
+  .ac .row span{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink-2)}
+  .ac .row input{width:100%}
+  .ac .rm{font-size:12px;padding:3px 8px}
+  .storycard{background:#FFFDF2;border:1px solid #EAD9A5;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.08);padding:16px 18px;position:relative;background-image:repeating-linear-gradient(#FFFDF2 0 27px,#E9EEF6 27px 28px);background-position:0 46px}
+  .storycard .pri{display:inline-block;margin-bottom:4px}
+  .storycard p{margin:0;font-size:16px;line-height:28px}
+  .storycard ul{margin:6px 0 0 18px;padding:0;font-size:14px;line-height:28px}
+  .pri{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:999px}
+  .pri.must{background:#FDECEC;color:#7F1D1D}.pri.should{background:#FEF4E6;color:#7C2D12}.pri.could{background:#EEF4FF;color:#1E3A8A}
+  .inv{list-style:none;margin:12px 0 0;padding:0}
+  .inv li{display:grid;grid-template-columns:34px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .inv .ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-family:var(--mono)}
+  .inv .pass .ic{background:var(--ok-soft);color:var(--ok)}
+  .inv .warn .ic{background:var(--warn-soft);color:var(--warn)}
+  .inv .fail .ic{background:var(--bad-soft);color:var(--bad)}
+  .inv b{display:block;font-size:14px}
+  .inv span.msg{font-size:13.5px;color:var(--ink-2)}
+  .qbar{height:10px;background:#EEF1F5;border-radius:999px;overflow:hidden;margin-top:6px}
+  .qbar div{height:100%;background:var(--au-red);width:0;border-radius:999px}
+  .bl{list-style:none;margin:0;padding:0}
+  .bl li{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--line);padding:8px 0;font-size:14px}
+  .bl li .x{font-size:12px;padding:3px 8px;flex:none}
+  #md{width:100%;min-height:140px;font-family:var(--mono);font-size:13px}
+  .row-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 2 · Interactive A</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 2 · Explorer</span>
+    <h1>User story builder</h1>
+    <p class="lede">A user story says who needs something, what they need and why. Build stories for your café or salon app, add acceptance criteria, and let the INVEST checker tell you what to improve before you hand the story to Copilot.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol>
+      <li>Load an example story, or start writing your own in the three fields.</li>
+      <li>Add at least two acceptance criteria in Given / When / Then form.</li>
+      <li>Watch the INVEST checker on the right and fix every red or amber item.</li>
+      <li>Add the finished story to your backlog. Repeat for more stories.</li>
+      <li>Export the backlog as Markdown and paste it into USER_STORIES.md for Assignment 2.1.</li>
+    </ol>
+  </details>
+
+  <div class="presets" role="group" aria-label="Load an example">
+    <button class="btn" data-p="cafeCustomer">Café: customer</button>
+    <button class="btn" data-p="cafeStaff">Café: kitchen staff</button>
+    <button class="btn" data-p="salonClient">Salon: client</button>
+    <button class="btn" data-p="salonStaff">Salon: staff</button>
+    <button class="btn" data-p="weak">Load a weak story</button>
+    <button class="btn" data-p="clear">Clear</button>
+  </div>
+
+  <div class="grid two">
+    <section class="card">
+      <h2>Write the story</h2>
+      <div class="fld"><label for="role"><span class="pre">As a</span>role</label>
+        <input type="text" id="role" list="roles" placeholder="regular customer" autocomplete="off">
+        <datalist id="roles"><option value="regular customer"><option value="first-time customer"><option value="kitchen staff member"><option value="café owner"><option value="salon client"><option value="stylist"><option value="salon receptionist"></datalist>
+        <div class="help">Be specific. "User" hides who you are designing for.</div></div>
+      <div class="fld"><label for="goal"><span class="pre">I want</span>goal</label>
+        <textarea id="goal" placeholder="to reorder my usual drink with one tap"></textarea>
+        <div class="help">One thing the person wants to do, not how the code works.</div></div>
+      <div class="fld"><label for="benefit"><span class="pre">so that</span>benefit</label>
+        <input type="text" id="benefit" placeholder="I spend less time in line" autocomplete="off">
+        <div class="help">Why it matters to them. This is what makes the story valuable.</div></div>
+      <div class="fld"><label for="prio">Priority</label>
+        <select id="prio"><option value="must">Must have</option><option value="should">Should have</option><option value="could">Could have</option></select></div>
+      <h3 style="margin-top:6px">Acceptance criteria</h3>
+      <div id="acs"></div>
+      <button class="btn" id="addAc">Add a criterion</button>
+    </section>
+
+    <aside class="card">
+      <h2>Story card</h2>
+      <div class="storycard" id="card"></div>
+      <h3 style="margin-top:16px">INVEST checker</h3>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2)"><span>Story quality</span><span id="qText">0 of 6 checks passed</span></div>
+      <div class="qbar"><div id="qFill"></div></div>
+      <ul class="inv" id="inv"></ul>
+      <div class="row-btns">
+        <button class="btn primary" id="addBl">Add to my backlog</button>
+        <button class="btn" id="copyOne">Copy this story</button>
+      </div>
+      <div id="msg"></div>
+    </aside>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>My backlog</h2>
+    <ul class="bl" id="bl"><li style="color:var(--muted)">No stories yet. Add your first story above.</li></ul>
+    <div class="row-btns"><button class="btn" id="exportBtn">Export as Markdown</button></div>
+    <div id="exportWrap" hidden style="margin-top:10px">
+      <textarea id="md" readonly aria-label="Backlog as Markdown"></textarea>
+      <div class="row-btns"><button class="btn" id="copyMd">Copy Markdown</button></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+
+<script>
+const hasGSAP = typeof window.gsap !== "undefined";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const PRESETS = {
+  cafeCustomer:{role:"regular customer", goal:"to reorder my usual drink with one tap", benefit:"I spend less time in line on my way to work", prio:"should",
+    ac:[["I have placed at least one order before","I open the menu page","I see a \"Reorder my usual\" button showing my last order"],["I tap \"Reorder my usual\"","the order is placed","it appears on the kitchen board with status received"]]},
+  cafeStaff:{role:"kitchen staff member", goal:"to move an order to the next status", benefit:"customers know when their food is ready", prio:"must",
+    ac:[["an order has status received","I click \"Start preparing\"","its status changes to preparing on the kitchen board"],["an order has status ready","the customer collects it and I click \"Picked up\"","it leaves the active board and appears in order history"]]},
+  salonClient:{role:"salon client", goal:"to see the open time slots for a service before I book", benefit:"I can choose a time that fits my schedule", prio:"must",
+    ac:[["I picked the Haircut service","I choose a date","I see only the times that are still free that day"],["a time is already booked","I look at that date","that time is not offered"]]},
+  salonStaff:{role:"salon receptionist", goal:"to confirm or cancel requested appointments", benefit:"the calendar only shows bookings we can honor", prio:"must",
+    ac:[["an appointment has status requested","I click \"Confirm\"","its status changes to confirmed and the client sees it in My appointments"],["an appointment has status requested","I click \"Cancel\" and confirm the dialog","its status changes to canceled and the time slot becomes free again"]]},
+  weak:{role:"user", goal:"manage all appointments and payments and reports with a nice, fast interface using a SQLite database and Flask routes", benefit:"", prio:"must", ac:[["","",""]]},
+  clear:{role:"", goal:"", benefit:"", prio:"must", ac:[["","",""],["","",""]]}
+};
+let backlog = [];
+
+function acRow(g="",w="",t=""){
+  const d = document.createElement("div"); d.className = "ac";
+  d.innerHTML = `<div class="row"><span>Given</span><input type="text" class="g" aria-label="Given" placeholder="a starting situation" value="${esc(g)}"></div>
+    <div class="row"><span>When</span><input type="text" class="w" aria-label="When" placeholder="the person does something" value="${esc(w)}"></div>
+    <div class="row"><span>Then</span><input type="text" class="t" aria-label="Then" placeholder="a result you can see and check" value="${esc(t)}"></div>
+    <button class="btn rm">Remove</button>`;
+  d.querySelector(".rm").onclick = ()=>{ d.remove(); update(); };
+  d.querySelectorAll("input").forEach(i=>i.oninput=update);
+  $("acs").appendChild(d);
+}
+function clean(s, prefixRe){ return s.trim().replace(prefixRe,"").replace(/[.\s]+$/,"").trim(); }
+function readStory(){
+  const role = clean($("role").value,/^as an?\s+/i);
+  const goal = clean($("goal").value,/^i want( to)?\s*/i);
+  const benefit = clean($("benefit").value,/^so that\s+/i);
+  const acs = [...document.querySelectorAll(".ac")].map(d=>[d.querySelector(".g").value.trim(),d.querySelector(".w").value.trim(),d.querySelector(".t").value.trim()]);
+  return {role, goal: goal && !/^to\s/i.test(goal) ? "to " + goal : goal, benefit, prio:$("prio").value, acs};
+}
+function words(s){ return s.split(/\s+/).filter(Boolean); }
+const TECH = /\b(flask|sqlite|database|sql|table|route|html|css|javascript|jinja|python|api|button colou?r|endpoint)\b/i;
+const VAGUE = /\b(easy|easily|fast|quick|quickly|nice|user[- ]friendly|better|simple|intuitive|modern|seamless)\b/i;
+const BIG = /\b(manage|everything|all features|handle all|all of|entire|whole system)\b/i;
+const DEPEND = /\b(after story|depends on|once story|first finish|requires story)\b/i;
+const GENERIC = /^(a |an |the )?(user|person|someone|people|anyone|customer)$/i;
+
+function invest(s){
+  const all = [s.role, s.goal, s.benefit].join(" ");
+  const full = s.acs.filter(a=>a[0]&&a[1]&&a[2]).length;
+  const partial = s.acs.filter(a=>(a[0]||a[1]||a[2]) && !(a[0]&&a[1]&&a[2])).length;
+  const gw = words(s.goal).length, ands = (s.goal.match(/\band\b/gi)||[]).length;
+  const R = [];
+  R.push(["I","Independent", DEPEND.test(all) ? ["warn","It mentions another story. Rewrite it so it can be built and tested on its own."] : ["pass","Nothing ties this story to another one."]]);
+  R.push(["N","Negotiable", TECH.test(all) ? ["warn","It names technology (Flask, SQLite, routes, HTML...). Describe what the person needs; leave how to build it for later."] : ["pass","It describes the need, not the code."]]);
+  R.push(["V","Valuable", words(s.benefit).length>=3 ? ["pass","The \"so that\" part explains why it matters."] : ["fail","Add a \"so that\" benefit of at least a few words. Without it you cannot judge if the story is worth building."]]);
+  let e;
+  if (!s.role) e = ["fail","Add a role: who wants this?"];
+  else if (GENERIC.test(s.role)) e = ["warn",`"${s.role}" is too general. Which customer or staff member? A specific role makes the work easier to estimate.`];
+  else if (gw<3) e = ["fail","The goal is too short to estimate. Say what the person wants to do."];
+  else e = ["pass","Specific role and clear goal: a developer could estimate it."];
+  R.push(["E","Estimable", e]);
+  let sm;
+  if (!s.goal) sm = ["fail","Write the goal first."];
+  else if (BIG.test(s.goal) || ands>=2 || gw>20) sm = ["warn","This looks like several stories in one (\"manage\", many \"and\"s, or a long goal). Split it into smaller stories."];
+  else sm = ["pass","Small enough to build and test in a few days."];
+  R.push(["S","Small", sm]);
+  let t;
+  const vague = VAGUE.test(all + " " + s.acs.map(a=>a[2]).join(" "));
+  if (full===0) t = ["fail","Add acceptance criteria with Given, When and Then filled in." + (vague ? " Also replace vague words (easy, fast, nice...) with something you can check." : "")];
+  else if (vague) t = ["warn","Vague words (easy, fast, nice, better...) cannot be tested. Replace them with something you can see or count."];
+  else if (full>=2 && !partial) t = ["pass",`${full} complete acceptance criteria. You can test this story.`];
+  else if (full>=1) t = ["warn", partial ? "One criterion is incomplete. Fill in Given, When and Then." : "Add a second acceptance criterion, ideally for an error or edge case."];
+  else t = ["fail","Add acceptance criteria with Given, When and Then filled in."];
+  R.push(["T","Testable", t]);
+  return R;
+}
+function storyText(s){
+  const head = `As a ${s.role || "___"}, I want ${s.goal || "___"}, so that ${s.benefit || "___"}.`;
+  return head;
+}
+function update(){
+  const s = readStory();
+  const acs = s.acs.filter(a=>a[0]||a[1]||a[2]);
+  $("card").innerHTML = `<span class="pri ${s.prio}">${s.prio} have</span><p>${esc(storyText(s))}</p>` +
+    (acs.length ? `<ul>${acs.map(a=>`<li><b>Given</b> ${esc(a[0]||"___")} <b>when</b> ${esc(a[1]||"___")} <b>then</b> ${esc(a[2]||"___")}</li>`).join("")}</ul>` : "");
+  const R = invest(s), passed = R.filter(r=>r[2][0]==="pass").length;
+  $("inv").innerHTML = R.map(([L,n,[st,m]])=>`<li class="${st}"><span class="ic">${L}</span><div><b>${n}: ${st==="pass"?"looks good":st==="warn"?"improve":"missing"}</b><span class="msg">${esc(m)}</span></div></li>`).join("");
+  $("qText").textContent = `${passed} of 6 checks passed`;
+  const pct = Math.round(passed/6*100);
+  if (hasGSAP) gsap.to("#qFill",{width:pct+"%",duration:.4}); else $("qFill").style.width = pct+"%";
+  return {s, passed};
+}
+function load(name){
+  const p = PRESETS[name];
+  $("role").value = p.role; $("goal").value = p.goal; $("benefit").value = p.benefit; $("prio").value = p.prio;
+  $("acs").innerHTML = ""; p.ac.forEach(a=>acRow(...a)); $("msg").innerHTML = ""; update();
+}
+document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>load(b.dataset.p));
+["role","goal","benefit","prio"].forEach(id=>$(id).addEventListener("input",update));
+$("prio").addEventListener("change",update);
+$("addAc").onclick = ()=>{ acRow(); update(); };
+
+function mdFor(s,i){
+  const acs = s.acs.filter(a=>a[0]&&a[1]&&a[2]).map(a=>`  - Given ${a[0]}, when ${a[1]}, then ${a[2]}.`).join("\n");
+  return `${i}. **[${s.prio.toUpperCase()}]** ${storyText(s)}\n${acs}`;
+}
+async function copyText(text, btn){
+  try { await navigator.clipboard.writeText(text); flash(btn,"Copied"); }
+  catch(e){ flash(btn,"Select and copy manually"); }
+}
+function flash(btn,t){ const o = btn.textContent; btn.textContent = t; setTimeout(()=>btn.textContent=o,1400); }
+$("copyOne").onclick = e => copyText(mdFor(readStory(),1).replace(/^1\. /,""), e.target);
+$("addBl").onclick = ()=>{
+  const {s, passed} = update();
+  if (!s.role || !s.goal){ $("msg").innerHTML = `<div class="feedback bad">Write at least a role and a goal first.</div>`; return; }
+  backlog.push(s);
+  $("msg").innerHTML = `<div class="feedback ${passed===6?"ok":"info"}">Added to your backlog${passed===6?", and it passes every INVEST check.":`, with ${6-passed} check(s) still to improve. You can fix it and add it again.`}</div>`;
+  renderBacklog();
+};
+function renderBacklog(){
+  if (!backlog.length){ $("bl").innerHTML = `<li style="color:var(--muted)">No stories yet. Add your first story above.</li>`; return; }
+  const order = {must:0,should:1,could:2};
+  const sorted = backlog.map((s,i)=>({s,i})).sort((a,b)=>order[a.s.prio]-order[b.s.prio]);
+  $("bl").innerHTML = sorted.map(({s,i})=>`<li><span><span class="pri ${s.prio}">${s.prio}</span> ${esc(storyText(s))}</span><button class="btn x" data-i="${i}">Remove</button></li>`).join("");
+  $("bl").querySelectorAll(".x").forEach(b=>b.onclick=()=>{ backlog.splice(+b.dataset.i,1); renderBacklog(); if(!$("exportWrap").hidden) doExport(); });
+}
+function doExport(){
+  const order = {must:0,should:1,could:2};
+  const sorted = [...backlog].sort((a,b)=>order[a.prio]-order[b.prio]);
+  $("md").value = "# User stories\n\n" + (sorted.length ? sorted.map((s,i)=>mdFor(s,i+1)).join("\n\n") : "(no stories yet)") + "\n";
+  $("exportWrap").hidden = false;
+}
+$("exportBtn").onclick = doExport;
+$("copyMd").onclick = e => { $("md").select(); copyText($("md").value, e.target); };
+load("cafeCustomer");
+</script>
+</body>
+</html>

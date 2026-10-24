@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt Quality Challenge</title>
+<meta name="description" content="EGN 475 Week 1 challenge: pick the stronger GitHub Copilot prompt, spot what weak prompts are missing, and build a prompt that scores high.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .elems{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:#fff}
+  .chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .progress{display:flex;gap:6px;margin:0 0 16px;flex-wrap:wrap}
+  .progress span{flex:1;min-width:28px;height:8px;border-radius:999px;background:#E5E7EB}
+  .progress span.done{background:var(--au-red)}
+  .progress span.now{background:#F8B4B4}
+  .task{background:#16181D;color:#fff;border-radius:10px;padding:12px 14px;margin:0 0 14px}
+  .task small{display:block;opacity:.7;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  .prompts{display:grid;gap:10px}
+  .pr{font:inherit;text-align:left;border:2px solid var(--line);background:#fff;border-radius:10px;padding:12px 14px;cursor:pointer;font-family:var(--mono);font-size:13.5px;line-height:1.5;color:var(--ink)}
+  .pr:hover{border-color:#C9CED6}
+  .pr .lab{display:block;font-family:var(--sans);font-weight:700;font-size:12px;color:var(--muted);margin-bottom:4px;letter-spacing:.05em}
+  .pr.picked{border-color:var(--ink)}
+  .pr.right{border-color:#4CAF6E;background:var(--ok-soft)}
+  .pr.wrong{border-color:#E57373;background:var(--bad-soft)}
+  .checks{display:grid;gap:8px;margin-top:8px}
+  @media(min-width:700px){.checks{grid-template-columns:1fr 1fr}}
+  .ck{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:#fff}
+  .ck input{margin-top:4px;accent-color:var(--au-red)}
+  .ck b{display:block;font-size:14px}
+  .ck span{font-size:13px;color:var(--ink-2)}
+  .ck.right{border-color:#4CAF6E;background:var(--ok-soft)}
+  .ck.wrong{border-color:#E57373;background:var(--bad-soft)}
+  .weakbox{font-family:var(--mono);font-size:13.5px;background:#FAFAFB;border:1px dashed #C9CED6;border-radius:10px;padding:10px 12px;margin-top:6px}
+  .cat{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+  .cat h3{display:flex;align-items:center;gap:8px}
+  .cat label{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:14px;cursor:pointer}
+  .cat input{margin-top:4px;accent-color:var(--au-red)}
+  .cat .why{font-size:13px;margin-top:4px}
+  .assembled{font-family:var(--mono);font-size:13.5px;line-height:1.6;background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:14px;min-height:120px;white-space:pre-wrap}
+  .bar-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .tally td:last-child{text-align:right;font-weight:600}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 1 · Interactive B</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 1 · Challenge</span>
+    <h1>Prompt quality challenge</h1>
+    <p class="lede">GitHub Copilot is only as good as your request. Pick the stronger prompt in each round, name what the weak one is missing, then build a prompt of your own. Your score is out of 100.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol>
+      <li>Read the five building blocks of a strong prompt below.</li>
+      <li>In each of the five rounds, click the prompt you would send to Copilot (10 points).</li>
+      <li>Then tick every building block the stronger prompt has and the weaker one lacks (4 points).</li>
+      <li>In the final round, assemble a prompt from blocks (30 points) and read the feedback.</li>
+    </ol>
+  </details>
+
+  <section class="card" style="margin-bottom:16px">
+    <h2>The five building blocks of a strong prompt</h2>
+    <div class="elems" id="legend"></div>
+  </section>
+
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <section class="card" id="roundCard">
+    <div class="task" id="task"></div>
+    <h2 id="qTitle">Which prompt would you send?</h2>
+    <div class="prompts" id="prompts"></div>
+    <div id="fb1"></div>
+    <div id="missingWrap" hidden>
+      <h2 style="margin-top:18px">What is the weak prompt missing?</h2>
+      <p style="margin:0">Tick every building block the stronger prompt has that this weaker one lacks:</p>
+      <div class="weakbox" id="weakText"></div>
+      <div class="checks" id="checks"></div>
+      <div class="bar-row"><button class="btn primary" id="checkMissing">Check my answer</button></div>
+      <div id="fb2"></div>
+    </div>
+    <div class="bar-row"><button class="btn primary" id="next" hidden>Next round</button></div>
+  </section>
+
+  <section class="card" id="builderCard" hidden>
+    <div class="task"><small>Final round · 30 points</small>Café Calle Ocho: staff need a way to mark an order as ready from the kitchen board.</div>
+    <h2>Build the prompt</h2>
+    <p style="margin:0 0 12px">Choose one option for each building block. The prompt on the right updates as you go.</p>
+    <div class="grid two">
+      <div id="cats"></div>
+      <div>
+        <h3>Your prompt to Copilot</h3>
+        <div class="assembled" id="assembled"></div>
+        <div class="bar-row"><button class="btn primary" id="grade">Score my prompt</button></div>
+        <div id="fb3"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="endCard" hidden>
+    <h2>Your result</h2>
+    <div class="score"><span>Total</span><span class="big" id="total">0</span><span>out of 100</span></div>
+    <table class="data tally" id="tally" style="margin-top:12px"></table>
+    <div id="endMsg"></div>
+    <div class="bar-row"><button class="btn" id="restart">Play again</button></div>
+  </section>
+</main>
+
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+
+<script>
+const hasGSAP = typeof window.gsap !== "undefined";
+const EL = {
+  context:{name:"Context", color:"#2563EB", hint:"What project, file, data and tools are involved."},
+  goal:{name:"Goal", color:"#B45309", hint:"Exactly what to build or change, one thing at a time."},
+  constraints:{name:"Constraints", color:"#7C3AED", hint:"Rules to follow: libraries, security, style, what not to touch."},
+  example:{name:"Example", color:"#0F766E", hint:"A sample input or output, or an existing pattern to copy."},
+  acceptance:{name:"Acceptance check", color:"#15803D", hint:"How you will know it works when you test it."}
+};
+const KEYS = Object.keys(EL);
+const ROUNDS = [
+  {opt:"Option A · Café", task:"Add a page that shows the café menu.",
+   prompts:["make a menu page",
+     "In my Flask app (app.py, templates in templates/), add a route /menu that renders menu.html. Pass a Python list of dicts with keys name, category and price_cents. Extend base.html. Show prices in dollars, for example 350 becomes $3.50. When I open /menu I should see 4 sample items grouped by category."],
+   best:1, weak:0, missing:["context","constraints","example","acceptance"],
+   why:"The strong prompt names the file and template folder, the data shape, a formatting example and what you should see. \"make a menu page\" leaves Copilot to guess everything."},
+  {opt:"Option B · Salon", task:"Validate the appointment booking form.",
+   prompts:["Write the best possible validation for my form. Make it professional and secure.",
+     "In app.py, add validation to the booking form so bad data is rejected.",
+     "In app.py, in the book() view, reject an empty client name and any date in the past. Show the error with flash() above the form. Do not add new libraries. Example: name \"\" and date 2020-01-01 gives two messages. When I submit an empty name, the form reloads with my other values still filled in."],
+   best:2, weak:1, missing:["constraints","example","acceptance"],
+   why:"The third prompt lists the exact rules, how errors appear, a library limit, an example and a test. The second names the file but not the rules, so Copilot invents its own idea of \"bad data\"."},
+  {opt:"Option A · Café", task:"Save a new order in the database.",
+   prompts:["Write a function that saves a new order using ? placeholders, with status 'received', and returns the new id so I can redirect to /orders/<id>.",
+     "Using sqlite3 and my get_db() helper in db.py, write insert_order(customer_name, notes) that inserts into the orders table (columns customer_name, status, notes, created_at). Use ? placeholders, never f-strings. Set status to 'received'. Follow the same style as my existing insert_menu_item() function. Return cursor.lastrowid so I can redirect to /orders/<id>."],
+   best:1, weak:0, missing:["context","example"],
+   why:"Both mention safe placeholders, but only the second says which helper, table and columns exist and points to an existing function to copy. Without that context Copilot may invent table names that do not match your schema."},
+  {opt:"Option B · Salon", task:"Show today's appointments on the staff calendar.",
+   prompts:["Show the staff calendar like this: Friday 10:00 Haircut, Ana (confirmed).",
+     "In my Flask app, add a staff-only route /calendar that reads today's rows from the appointments table with get_db() and renders calendar.html, sorted by time. Only show statuses requested and confirmed. Display each line like this: Friday 10:00 Haircut, Ana (confirmed). When I log in as staff I see today's 2 sample appointments in time order; a client account is redirected to the login page."],
+   best:1, weak:0, missing:["context","constraints","acceptance"],
+   why:"An example alone is not enough. The strong prompt adds where the data comes from, who may see it, which statuses to show and how to test it."},
+  {opt:"Both options", task:"Write an automated test for the menu or services page.",
+   prompts:["In tests/test_pages.py, using the client fixture from conftest.py, write a pytest test for GET /menu. Do not touch the real database: the fixture already creates a temporary one with seed data. Assert the status code is 200 and the page contains \"Café con leche\".",
+     "In tests/test_pages.py, using the client fixture from conftest.py, test my /menu route."],
+   best:0, weak:1, missing:["constraints","acceptance"],
+   why:"The first prompt says what to assert and warns Copilot not to use the real database. The second gives context and a goal, but a test with no stated check can \"pass\" while testing nothing."}
+];
+const BUILD = [
+  {key:"context", opts:[["In my Flask app, orders are stored in SQLite (table orders, column status) and I access the database with get_db() from db.py.",6,"Names the data and the helper, so the code fits your project."],["In my app.",0,"Too thin: Copilot does not know you use Flask, SQLite or get_db()."],["(leave out)",0,"Without context, Copilot guesses your table and column names."]]},
+  {key:"goal", opts:[["Make orders better.",0,"Vague. Better how?"],["Add a POST route /orders/<int:order_id>/ready that sets that order's status to 'ready'.",6,"One clear, testable change."],["Add every feature a kitchen might need.",0,"Far too big for one prompt. Ask for one feature at a time."]]},
+  {key:"constraints", opts:[["Use the fastest method, any library is fine.",0,"Invites new dependencies you never asked for."],["(leave out)",0,"Copilot may skip security: anyone could mark orders ready."],["Only staff may use it: use my login_required decorator and check that the role is 'staff'. Use ? placeholders. Redirect back to /kitchen after the update.",6,"Security, safe SQL and the redirect are all stated."]]},
+  {key:"example", opts:[["Follow the same pattern as my existing /orders/<id>/preparing route.",6,"Pointing to your own code keeps style and structure consistent."],["Make it like Amazon.",0,"Not a usable example for a small café app."],["(leave out)",0,"Allowed, but an example makes the result match your code."]]},
+  {key:"acceptance", opts:[["It should work.",0,"Not something you can test."],["(leave out)",0,"You will not know when the code is done."],["When I click Ready on order #12, the kitchen board shows #12 under Ready, and a customer account gets a 403 error.",6,"Two concrete checks you can run in the browser."]]}
+];
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let r = 0, pickPts = [], missPts = [], buildPts = 0, picked = false;
+
+$("legend").innerHTML = KEYS.map(k=>`<span class="chip" title="${EL[k].hint}"><i style="background:${EL[k].color}"></i>${EL[k].name}: <span style="font-weight:400">${EL[k].hint}</span></span>`).join("");
+
+function progress(){
+  $("progress").innerHTML = [...ROUNDS, {}].map((_,i)=>`<span class="${i<r?"done":i===r?"now":""}"></span>`).join("");
+}
+function showRound(){
+  progress(); picked = false;
+  const R = ROUNDS[r];
+  $("task").innerHTML = `<small>Round ${r+1} of ${ROUNDS.length} · ${R.opt}</small>${esc(R.task)}`;
+  $("prompts").innerHTML = R.prompts.map((p,i)=>`<button class="pr" data-i="${i}"><span class="lab">PROMPT ${String.fromCharCode(65+i)}</span>${esc(p)}</button>`).join("");
+  $("prompts").querySelectorAll(".pr").forEach(b=>b.onclick=()=>pick(+b.dataset.i));
+  $("fb1").innerHTML = ""; $("fb2").innerHTML = ""; $("missingWrap").hidden = true; $("next").hidden = true;
+  $("checkMissing").disabled = false;
+  if (hasGSAP) gsap.from("#roundCard",{opacity:0,y:10,duration:.35});
+}
+function pick(i){
+  if (picked) return; picked = true;
+  const R = ROUNDS[r], ok = i===R.best;
+  pickPts[r] = ok ? 10 : 0;
+  $("prompts").querySelectorAll(".pr").forEach((b,j)=>{b.disabled = true; if(j===R.best) b.classList.add("right"); else if(j===i) b.classList.add("wrong");});
+  $("fb1").innerHTML = `<div class="feedback ${ok?"ok":"bad"}">${ok?"Correct, +10.":"Not this one. The stronger prompt is marked in green."} ${esc(R.why)}</div>`;
+  $("weakText").textContent = R.prompts[R.weak];
+  $("checks").innerHTML = KEYS.map(k=>`<label class="ck" data-k="${k}"><input type="checkbox" value="${k}"><div><b>${EL[k].name}</b><span>${EL[k].hint}</span></div></label>`).join("");
+  $("missingWrap").hidden = false;
+}
+$("checkMissing").onclick = ()=>{
+  const R = ROUNDS[r];
+  const chosen = [...$("checks").querySelectorAll("input:checked")].map(x=>x.value);
+  let wrong = 0;
+  KEYS.forEach(k=>{
+    const should = R.missing.includes(k), did = chosen.includes(k);
+    const lab = $("checks").querySelector(`[data-k="${k}"]`);
+    lab.querySelector("input").disabled = true;
+    if (should !== did) wrong++;
+    if (should) lab.classList.add(did?"right":"wrong"); else if (did) lab.classList.add("wrong");
+  });
+  missPts[r] = Math.max(0, 4 - wrong);
+  const names = R.missing.map(k=>EL[k].name).join(", ");
+  $("fb2").innerHTML = `<div class="feedback ${wrong===0?"ok":"bad"}">${wrong===0?"Exactly right, +4.":`+${missPts[r]} of 4. Green boxes are missing elements; red means a wrong tick or a missed one.`} Missing here: ${names}.</div>`;
+  $("checkMissing").disabled = true;
+  $("next").hidden = false;
+  $("next").textContent = r < ROUNDS.length-1 ? "Next round" : "Go to the final round";
+};
+$("next").onclick = ()=>{
+  r++;
+  if (r < ROUNDS.length) showRound(); else startBuilder();
+};
+function startBuilder(){
+  progress();
+  $("roundCard").hidden = true; $("builderCard").hidden = false;
+  $("cats").innerHTML = BUILD.map((c,ci)=>`<div class="cat"><h3><i style="width:10px;height:10px;border-radius:50%;display:inline-block;background:${EL[c.key].color}"></i>${EL[c.key].name}</h3>${c.opts.map((o,oi)=>`<label><input type="radio" name="c${ci}" value="${oi}"><span>${esc(o[0])}</span></label>`).join("")}<div class="why" id="why${ci}"></div></div>`).join("");
+  $("cats").querySelectorAll("input").forEach(x=>x.onchange=()=>{ $("fb3").innerHTML=""; assemble(); });
+  assemble();
+  if (hasGSAP) gsap.from("#builderCard",{opacity:0,y:10,duration:.35});
+}
+function choice(ci){ const x = document.querySelector(`input[name=c${ci}]:checked`); return x ? +x.value : -1; }
+function assemble(){
+  const parts = BUILD.map((c,ci)=>{const i=choice(ci); return i<0 || c.opts[i][0]==="(leave out)" ? "" : c.opts[i][0];}).filter(Boolean);
+  $("assembled").textContent = parts.length ? parts.join(" ") : "Choose an option in each block to build your prompt.";
+}
+$("grade").onclick = ()=>{
+  const unanswered = BUILD.some((c,ci)=>choice(ci)<0);
+  if (unanswered){ $("fb3").innerHTML = `<div class="feedback info">Choose one option in every block first (a "leave out" choice counts).</div>`; return; }
+  buildPts = 0;
+  BUILD.forEach((c,ci)=>{
+    const o = c.opts[choice(ci)]; buildPts += o[1];
+    $("why"+ci).innerHTML = `<div class="feedback ${o[1]?"ok":"bad"}" style="margin-top:6px">${o[1]?"+6. ":"0. "}${esc(o[2])}</div>`;
+  });
+  document.querySelectorAll("#cats input").forEach(x=>x.disabled=true);
+  $("grade").disabled = true;
+  $("fb3").innerHTML = `<div class="feedback ${buildPts===30?"ok":"info"}">Prompt score: ${buildPts} of 30.</div><div class="bar-row"><button class="btn primary" id="toEnd">See my total</button></div>`;
+  $("toEnd").onclick = showEnd;
+};
+function showEnd(){
+  $("builderCard").hidden = true; $("endCard").hidden = false;
+  const p = pickPts.reduce((a,b)=>a+(b||0),0), m = missPts.reduce((a,b)=>a+(b||0),0), t = p+m+buildPts;
+  $("tally").innerHTML = `<tr><th>Part</th><th style="text-align:right">Points</th></tr><tr><td>Picking the stronger prompt (5 rounds)</td><td>${p} / 50</td></tr><tr><td>Naming what was missing (5 rounds)</td><td>${m} / 20</td></tr><tr><td>Building your own prompt</td><td>${buildPts} / 30</td></tr>`;
+  const msg = t>=85 ? "Excellent. You write prompts like a specification, which is exactly how this course uses Copilot."
+            : t>=65 ? "Good. Review the building blocks you missed most and use them in Assignment 1.1."
+            : "Keep practicing. Before each Copilot request, check all five building blocks. Then play again.";
+  $("endMsg").innerHTML = `<div class="feedback info" style="margin-top:12px">${msg}</div>`;
+  if (hasGSAP){ const o={v:0}; gsap.to(o,{v:t,duration:1,ease:"power1.out",onUpdate:()=>$("total").textContent=Math.round(o.v)}); } else $("total").textContent = t;
+}
+$("restart").onclick = ()=>{ r=0; pickPts=[]; missPts=[]; buildPts=0; $("endCard").hidden=true; $("builderCard").hidden=true; $("roundCard").hidden=false; $("grade").disabled=false; $("fb3").innerHTML=""; showRound(); };
+showRound();
+</script>
+</body>
+</html>

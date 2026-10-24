@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframe Match Challenge</title>
+<meta name="description" content="EGN 475 Week 2 challenge: match user stories to wireframes, find the missing element, and put screens in the right flow.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .parts{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+  .parts span{font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .parts span.on{background:var(--ink);color:#fff}
+  .parts span.done{background:var(--ok-soft);color:#14532D}
+  .gallery{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));margin:12px 0 18px}
+  .wfp{border:6px solid #374151;border-radius:16px;background:#fff;overflow:hidden;font-family:var(--mono);font-size:11px;color:#4B5563}
+  .wfp .lbl{background:#374151;color:#fff;font-family:var(--sans);font-size:12px;font-weight:700;padding:2px 8px 6px}
+  .wfp .in{padding:8px;display:grid;gap:5px}
+  .wfp .h{font-weight:700;font-size:12px;color:#1F2937;border-bottom:2px solid #9CA3AF;padding-bottom:3px}
+  .wfp .li{display:flex;justify-content:space-between;gap:4px;border:1px dashed #C4C9D0;border-radius:4px;padding:3px 5px}
+  .wfp .bt{border:2px solid #6B7280;border-radius:5px;padding:2px 6px;text-align:center;font-weight:600}
+  .wfp .fi{border:1.5px solid #9CA3AF;border-radius:4px;padding:3px 5px;background:#F9FAFB}
+  .wfp .tx{color:#6B7280}
+  .wfp .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+  .wfp .cols div{border:1px dashed #C4C9D0;border-radius:4px;padding:3px;min-height:46px}
+  .wfp .im{height:28px;background:repeating-linear-gradient(45deg,#E5E7EB 0 5px,#F3F4F6 5px 10px);border:1.5px solid #9CA3AF;border-radius:4px}
+  .wfp .tg{border:1.5px solid #9CA3AF;border-radius:999px;padding:1px 6px;justify-self:start}
+  .match{display:grid;gap:10px}
+  .mrow{display:grid;grid-template-columns:1fr 150px;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  @media(max-width:560px){.mrow{grid-template-columns:1fr}}
+  .mrow.right{border-color:#4CAF6E;background:var(--ok-soft)}
+  .mrow.wrong{border-color:#E57373;background:var(--bad-soft)}
+  .mrow .why{grid-column:1/-1;font-size:13px;color:var(--ink-2)}
+  .story{font-size:15px}
+  .story b{color:var(--au-red-dark)}
+  .miss{display:grid;gap:16px}
+  @media(min-width:760px){.miss{grid-template-columns:200px 1fr}}
+  .opts{display:grid;gap:8px}
+  .opts .btn{text-align:left}
+  .opts .btn.right{background:var(--ok-soft);border-color:#86D19F;color:#14532D}
+  .opts .btn.wrong{background:var(--bad-soft);border-color:#F1A7A7;color:#7F1D1D}
+  .flow{list-style:none;margin:12px 0;padding:0;display:grid;gap:8px}
+  .flow li{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
+  .flow li .n{width:28px;height:28px;border-radius:50%;background:#EEF1F5;display:grid;place-items:center;font-weight:700}
+  .flow li.right{border-color:#4CAF6E;background:var(--ok-soft)}
+  .flow li.wrong{border-color:#E57373;background:var(--bad-soft)}
+  .flow .mv{display:flex;gap:4px}
+  .flow .mv .btn{padding:4px 10px}
+  .flowgal{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-top:8px}
+  .scorebar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0;margin-bottom:8px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 2 · Interactive B</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 2 · Challenge</span>
+    <h1>Wireframe match challenge</h1>
+    <p class="lede">A wireframe is only useful if every user story has a screen that supports it. Match stories to screens, find what is missing, and put a booking flow in order. Your score is out of 100.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol>
+      <li>Part 1 (30 points): for each café story, choose the wireframe screen that supports it, then check.</li>
+      <li>Part 2 (40 points): each wireframe is missing one element its story needs. Pick it.</li>
+      <li>Part 3 (30 points): put the salon booking screens in the order a client uses them.</li>
+      <li>Read the explanation after each answer. These are the same checks you will run on your own wireframes in Assignment 2.2.</li>
+    </ol>
+  </details>
+
+  <div class="scorebar"><div class="score"><span>Score</span><span class="big" id="score">0</span><span>out of 100</span></div></div>
+  <div class="parts" id="parts"><span class="on">Part 1: match</span><span>Part 2: what is missing?</span><span>Part 3: flow</span></div>
+
+  <section class="card" id="p1">
+    <h2>Part 1: match each story to a screen</h2>
+    <p style="margin:0">Café Calle Ocho wireframes. Each story uses a different screen.</p>
+    <div class="gallery" id="gal1"></div>
+    <div class="match" id="match1"></div>
+    <div style="margin-top:12px"><button class="btn primary" id="check1">Check my matches</button></div>
+    <div id="fb1"></div>
+  </section>
+
+  <section class="card" id="p2" hidden>
+    <h2>Part 2: what is missing?</h2>
+    <p style="margin:0 0 12px">Question <span id="p2n">1</span> of 4. The wireframe does not yet support the story. Which element must be added?</p>
+    <div class="miss">
+      <div id="wf2"></div>
+      <div><p class="story" id="story2"></p><div class="opts" id="opts2"></div><div id="fb2"></div>
+        <div style="margin-top:12px"><button class="btn primary" id="next2" hidden>Next</button></div></div>
+    </div>
+  </section>
+
+  <section class="card" id="p3" hidden>
+    <h2>Part 3: put the booking flow in order</h2>
+    <p style="margin:0">Bella Vista Salon. A returning client wants to book a haircut. The app asks clients to log in before they can book. Use the arrows to order the screens from first to last.</p>
+    <div class="flowgal" id="gal3"></div>
+    <ol class="flow" id="flow"></ol>
+    <button class="btn primary" id="check3">Check my order</button>
+    <div id="fb3"></div>
+  </section>
+
+  <section class="card" id="end" hidden>
+    <h2>Your result</h2>
+    <table class="data" id="tally"></table>
+    <div id="endMsg"></div>
+    <div style="margin-top:12px"><button class="btn" id="again">Play again</button></div>
+  </section>
+</main>
+
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+
+<script>
+const hasGSAP = typeof window.gsap !== "undefined";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function el(e){
+  const [t,a,b] = e;
+  if (t==="h") return `<div class="h">${esc(a)}</div>`;
+  if (t==="li") return `<div class="li"><span>${esc(a)}</span>${b?`<span class="bt" style="padding:0 4px">${esc(b)}</span>`:""}</div>`;
+  if (t==="bt") return `<div class="bt">${esc(a)}</div>`;
+  if (t==="fi") return `<div class="fi">${esc(a)}</div>`;
+  if (t==="tx") return `<div class="tx">${esc(a)}</div>`;
+  if (t==="im") return `<div class="im" aria-hidden="true"></div>`;
+  if (t==="tg") return `<div class="tg">${esc(a)}</div>`;
+  if (t==="cols") return `<div class="cols">${a.map(c=>`<div><b>${esc(c[0])}</b>${c.slice(1).map(x=>`<div>${esc(x)}</div>`).join("")}</div>`).join("")}</div>`;
+  return "";
+}
+const wf = (label, els) => `<div class="wfp"><div class="lbl">${esc(label)}</div><div class="in">${els.map(el).join("")}</div></div>`;
+
+/* Part 1 */
+const S1 = [
+  {name:"Screen 1", els:[["h","Menu"],["tg","Hot drinks | Bakery | Snacks"],["li","Café con leche $3.50","Add"],["li","Cuban toast $2.75","Add"],["li","Croquetas $4.25","Add"],["tx","Order: 2 items"],["bt","View order"]]},
+  {name:"Screen 2", els:[["h","Your order"],["li","1 x Café con leche"],["li","1 x Cuban toast"],["tx","Total $6.25"],["fi","Notes for the kitchen..."],["bt","Place order"]]},
+  {name:"Screen 3", els:[["h","Kitchen board"],["cols",[["Received","#14"],["Preparing","#12","#13"],["Ready","#11"]]],["bt","Move to next status"]]},
+  {name:"Screen 4", els:[["h","My orders"],["li","Oct 20 · #11 · $5.25","Reorder"],["li","Oct 14 · #7 · $3.50","Reorder"],["li","Oct 9 · #4 · $8.00","Reorder"]]},
+  {name:"Screen 5", els:[["h","Menu admin (staff)"],["fi","Item name"],["fi","Category"],["fi","Price"],["tg","[x] Available"],["bt","Save item"],["li","Croquetas","Edit"]]}
+];
+const STORIES1 = [
+  ["customer","browse items by category and add them to my order","I can order quickly",0,"The menu screen has category tabs and an Add button on every item."],
+  ["customer","add a note like \"no sugar\" before I confirm","my drink is made the way I like it",1,"Only the order summary has a notes field next to the Place order button."],
+  ["kitchen staff member","move an order to the next status","customers know when food is ready",2,"The kitchen board shows orders in status columns with a button to move them."],
+  ["regular customer","reorder something I ordered last week","I do not have to search the menu again",3,"Order history lists past orders, each with a Reorder button."],
+  ["café owner","mark an item as sold out","customers cannot order it",4,"The admin form has an Available checkbox; unticking it marks the item sold out."]
+];
+let order1 = [], score = 0, pts = {p1:0,p2:0,p3:0};
+function shuffle(a){ a = [...a]; for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function storyHTML(role,goal,benefit){ return `<b>As a</b> ${esc(role)}, <b>I want</b> to ${esc(goal)}, <b>so that</b> ${esc(benefit)}.`; }
+function setScore(v){ score = v; if (hasGSAP){ const o={v:+$("score").textContent}; gsap.to(o,{v,duration:.5,onUpdate:()=>$("score").textContent=Math.round(o.v)}); } else $("score").textContent = v; }
+function initP1(){
+  $("gal1").innerHTML = S1.map(s=>wf(s.name,s.els)).join("");
+  order1 = shuffle(STORIES1.map((_,i)=>i));
+  $("match1").innerHTML = order1.map(i=>{ const s = STORIES1[i];
+    return `<div class="mrow" id="m${i}"><div class="story">${storyHTML(s[0],s[1],s[2])}</div><select aria-label="Screen for this story" data-i="${i}"><option value="">Choose a screen</option>${S1.map((x,j)=>`<option value="${j}">${x.name}</option>`).join("")}</select><div class="why"></div></div>`; }).join("");
+  $("fb1").innerHTML = ""; $("check1").disabled = false;
+}
+$("check1").onclick = ()=>{
+  const sels = [...$("match1").querySelectorAll("select")];
+  if (sels.some(s=>s.value==="")){ $("fb1").innerHTML = `<div class="feedback info">Choose a screen for every story first.</div>`; return; }
+  let got = 0;
+  sels.forEach(s=>{ const i = +s.dataset.i, ok = +s.value===STORIES1[i][3]; if (ok) got++;
+    const row = $("m"+i); row.classList.add(ok?"right":"wrong"); s.disabled = true;
+    row.querySelector(".why").textContent = (ok?"Correct. ":`Answer: ${S1[STORIES1[i][3]].name}. `) + STORIES1[i][4]; });
+  pts.p1 = got*6; setScore(pts.p1);
+  $("check1").disabled = true;
+  $("fb1").innerHTML = `<div class="feedback ${got===5?"ok":"info"}">${got} of 5 correct: +${pts.p1} points.</div><div style="margin-top:10px"><button class="btn primary" id="toP2">Go to Part 2</button></div>`;
+  $("toP2").onclick = startP2;
+};
+
+/* Part 2 */
+const P2 = [
+  {story:["salon client","choose a date and time for my haircut","I can book around my work schedule"], label:"Book: Haircut",
+   els:[["h","Book: Haircut"],["tx","45 min · $35.00"],["fi","Notes (optional)"],["bt","Request booking"]],
+   opts:["A date and time picker","The salon logo","Footer links","A photo of the stylist"], a:0,
+   why:"The story is about choosing a date and time, and the screen has no way to do it. Every story needs the inputs that let the person complete it."},
+  {story:["kitchen staff member","see special notes on each order","we prepare it the way the customer asked"], label:"Kitchen board",
+   els:[["h","Kitchen board"],["li","#12 · 2 x Café con leche","Ready"],["li","#13 · 1 x Cuban toast","Ready"]],
+   opts:["The customer's email address","The order notes on each card","A menu photo","The café opening hours"], a:1,
+   why:"The note entered at checkout must appear where the kitchen works, on each order card. Data captured on one screen often needs a place on another."},
+  {story:["salon receptionist","confirm or cancel requested appointments","the calendar only shows bookings we can honor"], label:"Staff calendar",
+   els:[["h","Today"],["li","10:00 · Ana · Haircut · requested"],["li","11:30 · Luis · Color · confirmed"],["li","14:00 · Mia · Blowout · requested"]],
+   opts:["A search bar","A logout link","Confirm and Cancel buttons on each appointment","The stylist's photo"], a:2,
+   why:"The screen shows status but gives no way to change it. A story with an action (confirm, cancel) needs a control for that action."},
+  {story:["customer","know when my order is ready","I pick it up while it is hot"], label:"Order placed",
+   els:[["h","Thank you!"],["tx","Order #14 received"],["bt","Back to menu"]],
+   opts:["An advertising banner","Menu categories","A password field","A live status: received, preparing, ready"], a:3,
+   why:"The customer can only know the order is ready if the screen shows its status and updates it. That status is the same workflow the kitchen board changes."}
+];
+let q2 = 0;
+function startP2(){
+  $("p1").hidden = true; $("p2").hidden = false; parts(1); q2 = 0; pts.p2 = 0; showQ2();
+}
+function showQ2(){
+  const Q = P2[q2];
+  $("p2n").textContent = q2+1;
+  $("wf2").innerHTML = wf(Q.label, Q.els);
+  $("story2").innerHTML = storyHTML(...Q.story);
+  $("opts2").innerHTML = Q.opts.map((o,i)=>`<button class="btn" data-i="${i}">${esc(o)}</button>`).join("");
+  $("opts2").querySelectorAll("button").forEach(b=>b.onclick=()=>answer2(+b.dataset.i));
+  $("fb2").innerHTML = ""; $("next2").hidden = true;
+  if (hasGSAP) gsap.from("#wf2 .wfp",{opacity:0,x:-12,duration:.35});
+}
+function answer2(i){
+  const Q = P2[q2], ok = i===Q.a;
+  $("opts2").querySelectorAll("button").forEach((b,j)=>{ b.disabled = true; if (j===Q.a) b.classList.add("right"); else if (j===i) b.classList.add("wrong"); });
+  if (ok){ pts.p2 += 10; setScore(pts.p1+pts.p2); }
+  $("fb2").innerHTML = `<div class="feedback ${ok?"ok":"bad"}">${ok?"Correct, +10.":"Not quite."} ${esc(Q.why)}</div>`;
+  $("next2").hidden = false; $("next2").textContent = q2<P2.length-1 ? "Next question" : "Go to Part 3";
+}
+$("next2").onclick = ()=>{ q2++; if (q2<P2.length) showQ2(); else startP3(); };
+
+/* Part 3 */
+const FLOW = [
+  {name:"Log in", els:[["h","Log in"],["fi","Username"],["fi","Password"],["bt","Log in"]]},
+  {name:"Services", els:[["h","Services"],["li","Haircut · $35","Book"],["li","Color · $85","Book"],["li","Blowout · $30","Book"]]},
+  {name:"Choose date and time", els:[["h","Haircut"],["fi","Date: Fri Oct 30"],["tg","10:00"],["tg","11:00"],["bt","Continue"]]},
+  {name:"Review and confirm", els:[["h","Review"],["tx","Haircut · Fri 10:00 · $35"],["fi","Notes"],["bt","Request booking"]]},
+  {name:"My appointments", els:[["h","My appointments"],["li","Fri 10:00 · Haircut"],["tg","requested"]]}
+];
+const WHY3 = ["Log in comes first, because the app requires an account before booking.","Then the client picks a service from the list.","Then a date and time for that service.","Then a review screen to confirm the details before anything is saved.","Finally, My appointments shows the new booking with status requested."];
+let flowOrder = [];
+function startP3(){
+  $("p2").hidden = true; $("p3").hidden = false; parts(2);
+  $("gal3").innerHTML = FLOW.map(f=>wf(f.name,f.els)).join("");
+  do { flowOrder = shuffle([0,1,2,3,4]); } while (flowOrder.every((v,i)=>v===i));
+  drawFlow(); $("check3").disabled = false; $("fb3").innerHTML = "";
+}
+function drawFlow(done){
+  $("flow").innerHTML = flowOrder.map((f,i)=>`<li class="${done?(f===i?"right":"wrong"):""}"><span class="n">${i+1}</span><span>${esc(FLOW[f].name)}</span><span class="mv">${done?"":`<button class="btn" data-up="${i}" aria-label="Move ${esc(FLOW[f].name)} up" ${i===0?"disabled":""}>&uarr;</button><button class="btn" data-dn="${i}" aria-label="Move ${esc(FLOW[f].name)} down" ${i===4?"disabled":""}>&darr;</button>`}</span></li>`).join("");
+  $("flow").querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.up; [flowOrder[i-1],flowOrder[i]]=[flowOrder[i],flowOrder[i-1]]; drawFlow(); $("flow").querySelector(`[data-up="${i-1}"],[data-dn="${i-1}"]`)?.focus(); });
+  $("flow").querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.dn; [flowOrder[i+1],flowOrder[i]]=[flowOrder[i],flowOrder[i+1]]; drawFlow(); $("flow").querySelector(`[data-dn="${i+1}"],[data-up="${i+1}"]`)?.focus(); });
+}
+$("check3").onclick = ()=>{
+  const got = flowOrder.filter((f,i)=>f===i).length;
+  pts.p3 = got*6; setScore(pts.p1+pts.p2+pts.p3);
+  drawFlow(true); $("check3").disabled = true;
+  $("fb3").innerHTML = `<div class="feedback ${got===5?"ok":"info"}">${got} of 5 screens in the right position: +${pts.p3} points.<ol style="margin:8px 0 0 18px;padding:0">${WHY3.map(w=>`<li>${esc(w)}</li>`).join("")}</ol></div><div style="margin-top:10px"><button class="btn primary" id="toEnd">See my result</button></div>`;
+  $("toEnd").onclick = showEnd;
+};
+function parts(n){ $("parts").querySelectorAll("span").forEach((s,i)=>s.className = i<n?"done":i===n?"on":""); }
+function showEnd(){
+  $("p3").hidden = true; $("end").hidden = false; parts(3);
+  const t = pts.p1+pts.p2+pts.p3;
+  $("tally").innerHTML = `<tr><th>Part</th><th style="text-align:right">Points</th></tr><tr><td>Part 1: match stories to screens</td><td style="text-align:right">${pts.p1} / 30</td></tr><tr><td>Part 2: find the missing element</td><td style="text-align:right">${pts.p2} / 40</td></tr><tr><td>Part 3: order the flow</td><td style="text-align:right">${pts.p3} / 30</td></tr><tr><td><b>Total</b></td><td style="text-align:right"><b>${t} / 100</b></td></tr>`;
+  $("endMsg").innerHTML = `<div class="feedback info" style="margin-top:12px">${t>=85?"Excellent. Run the same three checks on your own wireframes before you prompt Copilot in Assignment 2.2.":t>=60?"Good work. Before Assignment 2.2, check that every one of your stories has a screen with the inputs and buttons it needs.":"Review the explanations, then play again. Matching stories to screens is the core skill for this week."}</div>`;
+}
+$("again").onclick = ()=>{ pts={p1:0,p2:0,p3:0}; setScore(0); $("end").hidden = true; $("p1").hidden = false; parts(0); initP1(); };
+initP1();
+</script>
+</body>
+</html>
