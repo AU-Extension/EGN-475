@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usability Heuristics Challenge</title>
+<meta name="description" content="EGN 475 Week 6 challenge: find the usability problem on ten café and salon app screens, name the Nielsen heuristic it breaks, and choose the best fix.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+
+  .hud{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;justify-content:space-between;margin:0 0 14px}
+  .prog{flex:1;min-width:180px;height:8px;border-radius:999px;background:#E6E9EE;overflow:hidden}
+  .prog i{display:block;height:100%;width:0;background:var(--au-red);transition:width .3s}
+  .play{display:grid;gap:16px}
+  .play>*{min-width:0}
+  @media(min-width:980px){.play{grid-template-columns:1fr 1fr}}
+  .tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px}
+  .tag.a{background:#FEF3C7;color:#78350F}.tag.b{background:#EDE9FE;color:#4C1D95}.tag.ab{background:#E0F2FE;color:#0C4A6E}
+  .situ{background:#F5F6F8;border-left:4px solid var(--ink);border-radius:6px;padding:10px 12px;margin:10px 0 14px;font-size:15px}
+  .mock{border:1px solid #CBD2DA;border-radius:14px;background:#fff;max-width:440px;margin:0 auto;overflow:hidden;font-size:14px;box-shadow:0 2px 10px rgba(16,24,40,.08)}
+  .mbar{background:#1F2937;color:#fff;padding:10px 12px;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+  .mbody{padding:10px}
+  .hot{display:block;border:2px dashed transparent;border-radius:8px;padding:6px;margin:2px 0;cursor:pointer;outline:none}
+  .hot:hover,.hot:focus-visible{border-color:#93C5FD;background:#F5F9FF}
+  .hot.pick{border-color:#EF4444;background:#FEF2F2}
+  .hot.ans{border-color:#F59E0B;background:#FFFBEB;border-style:solid}
+  .locked .hot{cursor:default}
+  .locked .hot:hover{border-color:transparent;background:transparent}
+  .locked .hot.ans:hover{border-color:#F59E0B;background:#FFFBEB}
+  .locked .hot.pick:hover{border-color:#EF4444;background:#FEF2F2}
+  .mfield{margin:0 0 8px}
+  .mfield .l{font-size:12px;font-weight:600;color:#4B5563;margin-bottom:3px}
+  .mfield .i{border:1px solid #CBD2DA;border-radius:6px;padding:7px 9px;color:#6B7280;background:#fff}
+  .mbtn{display:inline-block;border-radius:6px;padding:7px 12px;font-weight:600;font-size:13px}
+  .mcard{border:1px solid #E5E7EB;border-radius:8px;padding:8px 10px;margin:0 0 6px;display:flex;justify-content:space-between;gap:8px}
+  .mt{width:100%;border-collapse:collapse;font-size:13px}
+  .mt td,.mt th{border-bottom:1px solid #E5E7EB;padding:6px;text-align:left}
+  .promo{display:inline-block;width:calc(50% - 6px);margin:3px;padding:10px 6px;border-radius:8px;color:#fff;font-weight:700;font-size:12px;text-align:center}
+  .cal{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;font-size:12px}
+  .cal div{border:1px solid #E5E7EB;border-radius:6px;padding:6px 2px;min-height:46px}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin:1px}
+  .step{font-weight:600;margin:0 0 8px}
+  .heur{display:grid;gap:6px}
+  @media(min-width:560px){.heur{grid-template-columns:1fr 1fr}}
+  .heur button,.fixes button{text-align:left;font-weight:500;line-height:1.4}
+  .fixes{display:flex;flex-direction:column;gap:8px}
+  button.right{background:var(--ok-soft)!important;border-color:#86D3A0!important}
+  button.wrong{background:var(--bad-soft)!important;border-color:#F0A3A3!important}
+  .done table td:last-child,.done table th:last-child{text-align:right}
+  .reflist{columns:2;column-gap:24px;font-size:14px;margin:8px 0 0;padding-left:20px}
+  @media(max-width:620px){.reflist{columns:1}}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 6 · Interactive B</div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 6 · Challenge</span>
+    <h1>Usability heuristics challenge</h1>
+    <p class="lede">A prototype that works can still confuse people. Each screen below comes from a café or salon app and has one usability problem. Find it, name the heuristic it breaks, and pick the fix that solves it. These are the same problems your usability test in Assignment 6.2 should uncover.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this challenge (and the ten heuristics)</summary>
+    <ol>
+      <li>Read the situation, then click the part of the screen that causes the problem (3 points).</li>
+      <li>Choose the heuristic it breaks (4 points).</li>
+      <li>Choose the best fix (3 points) and read the explanation.</li>
+      <li>Continue through all ten screens for a total of 100 points.</li>
+    </ol>
+    <p style="margin:8px 0 0;font-weight:600">Jakob Nielsen's ten usability heuristics</p>
+    <ol class="reflist" id="refList"></ol>
+  </details>
+
+  <div class="hud">
+    <div class="score"><span>Score</span><span class="big" id="score">0</span><span style="color:var(--muted)">/ 100</span></div>
+    <div class="prog" aria-hidden="true"><i id="progBar"></i></div>
+    <div id="progTxt" class="pill">Screen 1 of 10</div>
+  </div>
+
+  <div id="game" class="play">
+    <section class="card">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span class="tag" id="tag"></span><h2 id="sTitle" style="margin:0"></h2></div>
+      <div class="situ" id="situ"></div>
+      <div id="mockWrap"></div>
+    </section>
+    <aside class="card" aria-live="polite">
+      <p class="step" id="s1">Step 1: click the problem area on the screen.</p>
+      <div id="fb1"></div>
+      <div id="heurArea" hidden><p class="step">Step 2: which heuristic does it break?</p><div class="heur" id="heur"></div><div id="fb2"></div></div>
+      <div id="fixArea" hidden><p class="step" style="margin-top:12px">Step 3: choose the best fix.</p><div class="fixes" id="fixes"></div></div>
+      <div id="why" hidden style="margin-top:12px"></div>
+      <div style="margin-top:14px"><button type="button" class="btn primary" id="nextBtn" hidden>Next screen</button></div>
+    </aside>
+  </div>
+
+  <section id="done" class="card done" hidden>
+    <h2>Your result</h2>
+    <p class="score"><span class="big" id="finalScore">0</span><span>/ 100</span></p>
+    <p id="finalMsg"></p>
+    <div class="scroll-x"><table class="data" id="summary"></table></div>
+    <p style="margin-top:14px"><button type="button" class="btn primary" id="againBtn">Play again</button></p>
+  </section>
+</main>
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const HEUR = ['Visibility of system status', 'Match between the system and the real world', 'User control and freedom', 'Consistency and standards', 'Error prevention', 'Recognition rather than recall', 'Flexibility and efficiency of use', 'Aesthetic and minimalist design', 'Help users recognize, diagnose, and recover from errors', 'Help and documentation'];
+const HEURTIP = ['Keep users informed about what is going on.', 'Use the words and formats people already know.', 'Give an easy way to undo or leave.', 'Same things look and work the same way everywhere.', 'Design so mistakes cannot happen in the first place.', 'Show options instead of making people remember them.', 'Shortcuts for frequent tasks and experienced users.', 'Show only what matters, remove clutter.', 'Plain-language errors that explain how to fix the problem.', 'Short help where people need it.'];
+const H = (k, inner) => `<div class="hot" role="button" tabindex="0" data-h="${k}">${inner}</div>`;
+const bar = (t, r) => `<div class="mbar"><span>${t}</span><span style="font-weight:400;opacity:.8">${r || ''}</span></div>`;
+const SCREENS = [
+  {title: 'Kitchen board', tag: 'a', situ: 'Kitchen staff use this board during service to see which orders they still need to prepare.',
+    mock: bar('Café Calle Ocho', 'Kitchen') + '<div class="mbody">' + H('head', '<b style="font-size:16px">Kitchen board</b><div style="color:#6B7280;font-size:12px">Today</div>') + H('cards', ['#15 Cuban sandwich', '#16 Cortadito x3', '#17 Pastelito de guayaba', '#18 Cafecito x2'].map(x => `<div class="mcard"><span>${x}</span><span style="color:#9CA3AF">Table 4</span></div>`).join('')) + H('refresh', '<span class="mbtn" style="background:#E5E7EB">Refresh</span>') + H('clock', '<div style="text-align:right;color:#6B7280;font-size:12px">12:41 PM</div>') + '</div>',
+    hot: ['cards'], heur: 0,
+    fixes: [['Show a colored status badge (received, preparing, ready) on every order card', true], ['Make the order numbers larger', false], ['Add the café logo to the header', false], ['Sort the cards alphabetically by item name', false]],
+    why: 'Nothing on the cards tells staff the state of each order, so two cooks can start the same sandwich or forget one. A clear status badge keeps everyone informed about what is going on: visibility of system status.'},
+  {title: 'Book an appointment', tag: 'b', situ: 'Clients keep booking Sundays and dates in the past, when nobody is at the salon.',
+    mock: bar('Bella Vista Salon', 'Book') + '<div class="mbody">' + H('svc', '<div class="mfield"><div class="l">Service</div><div class="i">Haircut (45 min) ▾</div></div>') + H('date', '<div class="mfield"><div class="l">Date</div><div class="i">Type the date</div></div>') + H('time', '<div class="mfield"><div class="l">Time</div><div class="i">10:30 ▾</div></div>') + H('btn', '<span class="mbtn" style="background:#E1141E;color:#fff">Request appointment</span>') + '</div>',
+    hot: ['date'], heur: 4,
+    fixes: [['Use a date picker that only allows future days when the salon is open', true], ['Add a red asterisk to the date label', false], ['Show an error message the day after the booking', false], ['Make the placeholder text longer', false]],
+    why: 'A free-text date box lets people enter anything, including closed days and past dates. Designing the input so invalid choices are impossible prevents the mistake instead of reporting it later: error prevention. (Keep server-side validation too.)'},
+  {title: 'Create an account', tag: 'ab', situ: 'A new user just tried to register with a username that someone else already has.',
+    mock: bar('Create an account') + '<div class="mbody">' + H('err', '<div style="background:#FEE2E2;color:#991B1B;border-radius:6px;padding:8px;font-family:monospace;font-size:12px">sqlite3.IntegrityError: UNIQUE constraint failed: users.username</div>') + H('user', '<div class="mfield"><div class="l">Username</div><div class="i">&nbsp;</div></div>') + H('pw', '<div class="mfield"><div class="l">Password</div><div class="i">&nbsp;</div></div>') + H('btn', '<span class="mbtn" style="background:#E1141E;color:#fff">Register</span>') + '</div>',
+    hot: ['err'], heur: 8,
+    fixes: [['Show "That username is taken. Please try another one." next to the field and keep what the user typed', true], ['Show the full Python traceback so the user can report it', false], ['Redirect to the home page without a message', false], ['Make the error box bigger and brighter', false]],
+    why: 'A raw database error means nothing to a customer, and the cleared form makes them start over. A plain-language message that explains the problem and how to fix it helps users recognize, diagnose, and recover from errors.'},
+  {title: 'Edit a menu item', tag: 'a', situ: 'On every other page of this app, the main action is a red primary button on the left, and dangerous actions are small and gray.',
+    mock: bar('Café Calle Ocho', 'Admin') + '<div class="mbody">' + H('head', '<b style="font-size:16px">Edit: Cortadito</b>') + H('fields', '<div class="mfield"><div class="l">Name</div><div class="i">Cortadito</div></div><div class="mfield"><div class="l">Price</div><div class="i">$2.75</div></div>') + H('btns', '<span class="mbtn" style="background:#16A34A;color:#fff;font-size:15px;padding:10px 16px">Delete item</span> <a style="font-size:12px;color:#6B7280;text-decoration:underline;margin-left:8px">save</a>') + '</div>',
+    hot: ['btns'], heur: 3,
+    fixes: [['Style Save as the same red primary button used everywhere else, and make Delete a secondary button clearly marked as dangerous', true], ['Swap the words on the two buttons', false], ['Make both buttons green', false], ['Add a trash icon next to Delete', false]],
+    why: 'Users learn your app\'s patterns. Here the big colorful button deletes the item and Save is a tiny link, the opposite of every other page, so staff will delete items by habit. Same things should look and work the same everywhere: consistency and standards.'},
+  {title: 'Choose a service', tag: 'b', situ: 'To book, clients must first look up a service code on another page and then type it here.',
+    mock: bar('Bella Vista Salon', 'Book') + '<div class="mbody">' + H('code', '<div class="mfield"><div class="l">Service code</div><div class="i">e.g. SVC-03 (see the Services page)</div></div>') + H('date', '<div class="mfield"><div class="l">Date</div><div class="i">Fri, Nov 6 ▾</div></div>') + H('time', '<div class="mfield"><div class="l">Time</div><div class="i">15:30 ▾</div></div>') + H('btn', '<span class="mbtn" style="background:#E1141E;color:#fff">Request appointment</span>') + '</div>',
+    hot: ['code'], heur: 5,
+    fixes: [['Replace the code box with a list of services showing name, duration, and price to pick from', true], ['Print the service codes on a flyer at the front desk', false], ['Make the code box wider', false], ['Accept the codes in lowercase too', false]],
+    why: 'People should not have to remember information from one screen to use another. Showing the choices on the screen itself lets clients recognize what they want: recognition rather than recall.'},
+  {title: 'My appointments', tag: 'b', situ: 'A client booked the wrong day by mistake and wants to undo it.',
+    mock: bar('Bella Vista Salon', 'My appointments') + '<div class="mbody">' + H('head', '<b style="font-size:16px">My appointments</b>') + H('rows', '<div class="mcard"><span>Haircut, Fri Nov 6, 10:30</span><span style="color:#6B7280">requested</span></div><div class="mcard"><span>Manicure, Tue Nov 10, 15:30</span><span style="color:#6B7280">confirmed</span></div>') + H('note', '<div style="font-size:12px;color:#6B7280">To change an appointment, call (305) 555-0142 during business hours.</div>') + '</div>',
+    hot: ['rows', 'note'], heur: 2,
+    fixes: [['Add a Cancel button on each upcoming appointment, with a short confirmation', true], ['Make the phone number bigger', false], ['Send the client a reminder email', false], ['Hide past appointments', false]],
+    why: 'Users make mistakes and need a clearly marked way out. Forcing a phone call during business hours traps them. A cancel option (with a confirmation for safety) gives back user control and freedom.'},
+  {title: 'Order history', tag: 'a', situ: 'Customers say this page is confusing.',
+    mock: bar('Café Calle Ocho', 'My orders') + '<div class="mbody">' + H('head', '<b style="font-size:16px">Order history</b>') + H('filter', '<div class="mfield"><div class="i">All orders ▾</div></div>') + H('table', '<table class="mt"><tr><th>Item</th><th>Total</th><th>Status</th></tr><tr><td>Cafecito x2</td><td>500</td><td>ST_4</td></tr><tr><td>Cuban sandwich</td><td>995</td><td>ST_2</td></tr><tr><td>Cortadito</td><td>275</td><td>ST_1</td></tr></table>') + '</div>',
+    hot: ['table'], heur: 1,
+    fixes: [['Show totals as dollars ($5.00) and statuses as words (received, preparing, ready, picked up)', true], ['Add more columns with order ids and timestamps', false], ['Sort the table by status code', false], ['Explain the codes in a tooltip on hover', false]],
+    why: 'Storing money as integer cents and statuses as codes is fine inside the database, but customers think in dollars and plain words. Show information in the language and formats of the real world: match between the system and the real world.'},
+  {title: 'Salon home page', tag: 'b', situ: 'First-time visitors cannot figure out how to book an appointment.',
+    mock: bar('Bella Vista Salon') + '<div class="mbody">' + H('promos', ['#DB2777', '#7C3AED', '#0891B2', '#EA580C', '#16A34A', '#CA8A04'].map((c, i) => `<span class="promo" style="background:${c}">${['NEW! Keratin', '20% OFF Tues', 'Gift cards!', 'Follow us', 'Bridal deals', 'Summer glow'][i]}</span>`).join('')) + H('book', '<div style="text-align:center;font-size:11px;color:#9CA3AF">Book now</div>') + '</div>',
+    hot: ['promos', 'book'], heur: 7,
+    fixes: [['Remove most promotions and make one large "Book now" button the main element of the page', true], ['Add more banners about booking', false], ['Animate the banners so they rotate', false], ['Move "Book now" into the footer menu', false]],
+    why: 'Every extra element competes with the one action that matters. Six loud banners bury the booking link. Show only what supports the main task: aesthetic and minimalist design.'},
+  {title: 'Updating an order', tag: 'a', situ: 'During the lunch rush, kitchen staff update about 60 orders an hour.',
+    mock: bar('Café Calle Ocho', 'Kitchen') + '<div class="mbody">' + H('head', '<b style="font-size:16px">Kitchen board</b>') + `<div class="mcard"><span>#21 Cuban sandwich <span style="color:#B45309">preparing</span></span>${H('open', '<span class="mbtn" style="background:#E5E7EB">Open order</span>')}</div>` + H('steps', '<div style="font-size:12px;color:#6B7280">To change a status: Open order, then Edit, then choose from the Status list, then Save, then Back to board.</div>') + '</div>',
+    hot: ['open', 'steps'], heur: 6,
+    fixes: [['Add a one-click "Next status" button on each card of the board', true], ['Add a confirmation popup to every change', false], ['Make the Save button blue', false], ['Show a training video before each shift', false]],
+    why: 'Five clicks for the most frequent task wastes minutes every hour. Frequent actions deserve shortcuts that experienced users can do fast: flexibility and efficiency of use.'},
+  {title: 'Staff calendar', tag: 'b', situ: 'A new stylist starts today and has to read this calendar on her own.',
+    mock: bar('Bella Vista Salon', 'Staff') + '<div class="mbody">' + H('head', '<b style="font-size:16px">This week</b>') + H('dots', '<div class="cal">' + [['Mon', ['#16A34A', '#16A34A', '#F59E0B']], ['Tue', ['#F59E0B', '#9CA3AF']], ['Wed', ['#16A34A', '#DC2626']], ['Thu', ['#2563EB', '#16A34A', '#16A34A']], ['Fri', ['#F59E0B', '#F59E0B', '#16A34A']]].map(d => `<div><b>${d[0]}</b><br>${d[1].map(c => `<span class="dot" style="background:${c}"></span>`).join('')}</div>`).join('') + '</div>') + H('add', '<span class="mbtn" style="background:#E1141E;color:#fff">+ Add</span>') + '</div>',
+    hot: ['dots'], heur: 9,
+    fixes: [['Add a small legend that explains each color (requested, confirmed, completed, canceled)', true], ['Use more colors so each appointment is unique', false], ['Remove the dots and show only the day names', false], ['Ask the new stylist to memorize the colors', false]],
+    why: 'The colors carry meaning that only experienced staff know. A short, visible legend right where it is needed is the simplest kind of help: help and documentation. (Text labels also help people who cannot tell colors apart.)'}
+];
+const TAGTXT = {a: 'Option A: café', b: 'Option B: salon', ab: 'Both options'};
+let i = 0, score = 0, phase = 'area', res = [];
+$('#refList').innerHTML = HEUR.map((h, k) => `<li><b>${h}</b>: ${HEURTIP[k]}</li>`).join('');
+function shuffle(a) { const b = a.slice(); for (let k = b.length - 1; k > 0; k--) { const r = Math.floor(Math.random() * (k + 1)); [b[k], b[r]] = [b[r], b[k]]; } return b; }
+function show() {
+  const s = SCREENS[i]; phase = 'area'; res[i] = {area: 0, heur: 0, fix: 0};
+  $('#tag').className = 'tag ' + s.tag; $('#tag').textContent = TAGTXT[s.tag];
+  $('#sTitle').textContent = s.title; $('#situ').textContent = s.situ;
+  $('#mockWrap').innerHTML = `<div class="mock" id="mock" aria-label="Mock app screen">${s.mock}</div>`;
+  document.querySelectorAll('#mock .hot').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); pickArea(el); });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); pickArea(el); } });
+  });
+  $('#s1').textContent = 'Step 1: click the problem area on the screen.';
+  ['#fb1', '#fb2', '#why'].forEach(x => $(x).innerHTML = '');
+  $('#heurArea').hidden = true; $('#fixArea').hidden = true; $('#why').hidden = true; $('#nextBtn').hidden = true;
+  $('#progTxt').textContent = `Screen ${i + 1} of ${SCREENS.length}`; $('#progBar').style.width = (i / SCREENS.length * 100) + '%';
+  if (hasGSAP) gsap.from('#mock', {y: 14, opacity: 0, duration: .4});
+}
+function pickArea(el) {
+  if (phase !== 'area') return;
+  const hot = el.closest('.hot'); const s = SCREENS[i]; phase = 'heur';
+  const ok = s.hot.includes(hot.dataset.h);
+  $('#mock').classList.add('locked');
+  document.querySelectorAll('#mock .hot').forEach(h => { h.tabIndex = -1; if (s.hot.includes(h.dataset.h)) h.classList.add('ans'); });
+  if (!ok) hot.classList.add('pick');
+  if (ok) { score += 3; res[i].area = 3; }
+  $('#fb1').innerHTML = ok ? '<div class="feedback ok">Yes, that is the problem area. +3 points.</div>' : '<div class="feedback bad">Not quite. The problem area is outlined in orange.</div>';
+  upd();
+  $('#heur').innerHTML = HEUR.map((h, k) => `<button type="button" class="btn" data-k="${k}">${h}</button>`).join('');
+  $('#heur').querySelectorAll('button').forEach(b => b.addEventListener('click', () => pickHeur(b)));
+  $('#heurArea').hidden = false; $('#heur button').focus();
+}
+function pickHeur(b) {
+  if (phase !== 'heur') return; phase = 'fix';
+  const s = SCREENS[i], k = +b.dataset.k, ok = k === s.heur;
+  $('#heur').querySelectorAll('button').forEach(x => { x.disabled = true; if (+x.dataset.k === s.heur) x.classList.add('right'); });
+  if (!ok) b.classList.add('wrong'); else { score += 4; res[i].heur = 4; }
+  $('#fb2').innerHTML = ok ? '<div class="feedback ok">Correct heuristic. +4 points.</div>' : `<div class="feedback bad">This screen breaks <b>${HEUR[s.heur]}</b>.</div>`;
+  upd();
+  $('#fixes').innerHTML = shuffle(s.fixes).map(f => `<button type="button" class="btn" data-ok="${f[1]}">${esc(f[0])}</button>`).join('');
+  $('#fixes').querySelectorAll('button').forEach(x => x.addEventListener('click', () => pickFix(x)));
+  $('#fixArea').hidden = false; $('#fixes button').focus();
+}
+function pickFix(b) {
+  if (phase !== 'fix') return; phase = 'done';
+  const ok = b.dataset.ok === 'true';
+  $('#fixes').querySelectorAll('button').forEach(x => { x.disabled = true; if (x.dataset.ok === 'true') x.classList.add('right'); });
+  if (!ok) b.classList.add('wrong'); else { score += 3; res[i].fix = 3; }
+  upd();
+  $('#why').innerHTML = `<div class="feedback ${ok ? 'ok' : 'bad'}">${ok ? 'Best fix. +3 points.' : 'Not the best fix. The green option solves the real problem.'}</div><div class="feedback info"><b>Why:</b> ${esc(SCREENS[i].why)}</div>`;
+  $('#why').hidden = false; $('#nextBtn').hidden = false; $('#nextBtn').textContent = i === SCREENS.length - 1 ? 'See my result' : 'Next screen'; $('#nextBtn').focus();
+}
+function upd() { $('#score').textContent = score; if (hasGSAP) gsap.fromTo('#score', {scale: 1.25}, {scale: 1, duration: .3}); }
+function finish() {
+  $('#game').hidden = true; $('#done').hidden = false; $('#progBar').style.width = '100%'; $('#progTxt').textContent = 'Finished';
+  $('#finalScore').textContent = score;
+  $('#finalMsg').textContent = score >= 90 ? 'Excellent eye for usability. Use the same eye on your own prototype before your user tests.' : score >= 70 ? 'Good work. Review the heuristics you missed, then look for them in your own app.' : 'Keep practicing. Open the heuristic list at the top, read each tip, and play again.';
+  $('#summary').innerHTML = '<tr><th>#</th><th>Screen</th><th>Heuristic</th><th>Area</th><th>Heuristic</th><th>Fix</th><th>Points</th></tr>' + SCREENS.map((s, k) => `<tr><td>${k + 1}</td><td>${esc(s.title)}</td><td>${HEUR[s.heur]}</td><td>${res[k].area}</td><td>${res[k].heur}</td><td>${res[k].fix}</td><td>${res[k].area + res[k].heur + res[k].fix}</td></tr>`).join('') + `<tr><th></th><th>Total</th><th></th><th></th><th></th><th></th><th>${score}</th></tr>`;
+  $('#done').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+$('#nextBtn').addEventListener('click', () => { if (i < SCREENS.length - 1) { i++; show(); } else finish(); });
+$('#againBtn').addEventListener('click', () => { i = 0; score = 0; res = []; upd(); $('#game').hidden = false; $('#done').hidden = true; show(); });
+show();
+</script>
+</body>
+</html>

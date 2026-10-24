@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post Redirect Get Flow</title>
+<meta name="description" content="EGN 475 Week 5 interactive: watch a Flask form submission travel from browser to server and back, with validation, redirects, flash messages, and the duplicate-order problem.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:0 0 16px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .seg button{font:inherit;font-size:14px;font-weight:600;border:0;background:transparent;padding:8px 14px;cursor:pointer;color:var(--ink-2)}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .seg-label{font-size:13px;color:var(--muted);font-weight:600;margin-right:6px}
+  .stage{display:grid;gap:16px}
+  .stage>*,.lower>*{min-width:0}
+  @media(min-width:960px){.stage{grid-template-columns:1fr 1.15fr}}
+  .browser{border:1px solid #CBD2DA;border-radius:12px;overflow:hidden;background:#fff}
+  .chrome{background:#EEF1F5;padding:8px 10px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #DDE2E8}
+  .dots{display:flex;gap:5px;flex:none}.dots i{width:10px;height:10px;border-radius:50%;background:#CBD2DA;display:block}
+  .addr{flex:1;min-width:0;background:#fff;border:1px solid #DDE2E8;border-radius:999px;padding:4px 12px;font-family:var(--mono);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .page{padding:16px;min-height:300px}
+  .page h3{font-size:18px;margin:0 0 10px}
+  .field{margin:0 0 12px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+  .field input,.field select{width:100%}
+  .errbox{background:var(--bad-soft);border:1px solid #F5C2C2;color:#7F1D1D;border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:14px}
+  .errbox ul{margin:4px 0 0 18px;padding:0}
+  .flash{background:var(--ok-soft);border:1px solid #BBE5C8;color:#14532D;border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:14px;font-weight:600}
+  .rows{list-style:none;margin:0;padding:0}
+  .rows li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid var(--line);padding:8px 2px;font-size:14px}
+  .rows li.dup{background:var(--warn-soft)}
+  .browser-actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid var(--line);background:#FAFAFB}
+  .server{display:flex;flex-direction:column;gap:12px}
+  .wire{display:flex;align-items:center;gap:10px;min-height:44px;border:1px dashed #CBD2DA;border-radius:10px;padding:8px 12px;background:#fff;overflow:hidden}
+  .wire .lbl{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;flex:none}
+  .msg{font-family:var(--mono);font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;background:#EEF1F5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .msg.req{background:#E0EAFF;color:#1E3A8A}.msg.res2{background:var(--ok-soft);color:#14532D}.msg.res3{background:var(--warn-soft);color:#7C2D12}
+  .code{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:12.5px;line-height:1.55;border-radius:10px;padding:10px 0;overflow-x:auto}
+  .code div{padding:0 14px;white-space:pre;border-left:3px solid transparent}
+  .code div.hl{background:rgba(250,204,21,.18);border-left-color:#FACC15}
+  .code .ln{display:inline-block;width:2.2em;color:#5B6B82;user-select:none}
+  .narr{background:#EEF4FF;border:1px solid #C7D7FE;color:#1E3A8A;border-radius:10px;padding:12px 14px;font-size:15px;min-height:64px}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .controls label{font-size:14px;display:flex;gap:6px;align-items:center}
+  .log{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:13px;max-height:220px;overflow:auto}
+  .log li{padding:5px 2px;border-bottom:1px solid var(--line);display:flex;gap:8px}
+  .log .n{color:var(--muted);flex:none;width:1.8em}
+  .lower{display:grid;gap:16px;margin-top:16px}
+  @media(min-width:960px){.lower{grid-template-columns:1fr 1fr}}
+  .dbt td.dup{background:var(--warn-soft)}
+  .modal{border:2px solid var(--warn);background:var(--warn-soft);border-radius:10px;padding:12px 14px;margin:0 0 12px}
+  .modal p{margin:0 0 8px;font-size:14px}
+  .q{border-top:1px solid var(--line);padding:12px 0}
+  .q:first-of-type{border-top:0}
+  .q p{margin:0 0 8px;font-weight:600}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opts button{text-align:left}
+  .opts button.right{background:var(--ok-soft);border-color:#86D3A0}
+  .opts button.wrong{background:var(--bad-soft);border-color:#F0A3A3}
+  .qfb{font-size:14px;margin-top:6px;color:var(--ink-2)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 5 · Interactive A</div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 5 · Explorer</span>
+    <h1>Post, redirect, get: how a Flask form really works</h1>
+    <p class="lede">Submit a form in the mock browser and watch every request and response travel to the Flask server and back. Then press refresh and see why a missing redirect can send the kitchen a duplicate order.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol>
+      <li>Choose your project option (café or salon). The form and the Flask code change to match.</li>
+      <li>Fill in the form, or leave a field empty on purpose, and press the submit button.</li>
+      <li>Watch the server panel: the highlighted code line is the one running now, and the blue box explains it.</li>
+      <li>After a successful submit, press "Refresh (F5)" and compare what happens in each mode.</li>
+      <li>Switch to "No redirect" mode and repeat. Check the database table for duplicates.</li>
+    </ol>
+  </details>
+
+  <div class="toolbar">
+    <div><span class="seg-label">Project</span>
+      <span class="seg" role="group" aria-label="Project option">
+        <button type="button" data-opt="cafe" aria-pressed="true">Option A: café</button>
+        <button type="button" data-opt="salon" aria-pressed="false">Option B: salon</button>
+      </span></div>
+    <div><span class="seg-label">Mode</span>
+      <span class="seg" role="group" aria-label="Pattern mode">
+        <button type="button" data-mode="prg" aria-pressed="true">Post, redirect, get</button>
+        <button type="button" data-mode="nor" aria-pressed="false">No redirect</button>
+      </span></div>
+    <button type="button" class="btn" id="resetBtn">Start over</button>
+  </div>
+
+  <div class="stage">
+    <section class="card" aria-labelledby="bTitle" style="padding:16px">
+      <h2 id="bTitle">Browser</h2>
+      <div class="browser">
+        <div class="chrome"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><div class="addr" id="addr" aria-label="Address bar">127.0.0.1:5000/orders/new</div></div>
+        <div class="page" id="page" aria-live="polite"></div>
+        <div class="browser-actions">
+          <button type="button" class="btn" id="refreshBtn">Refresh (F5)</button>
+          <button type="button" class="btn" id="goFormBtn">Go to the form</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card server" aria-labelledby="sTitle">
+      <h2 id="sTitle" style="margin:0">Flask server</h2>
+      <div class="wire" aria-live="polite"><span class="lbl">On the wire</span><span class="msg" id="msg">waiting</span></div>
+      <div class="code" id="code" aria-label="Flask view code"></div>
+      <div class="narr" id="narr" aria-live="polite">Press the submit button in the browser to start.</div>
+      <div class="controls">
+        <label><input type="checkbox" id="stepMode"> Pause after each step</label>
+        <button type="button" class="btn primary" id="nextBtn" disabled>Next step</button>
+        <label>Speed <select id="speed"><option value="1300">Slow</option><option value="800" selected>Normal</option><option value="350">Fast</option></select></label>
+      </div>
+    </section>
+  </div>
+
+  <div class="lower">
+    <section class="card">
+      <h2>HTTP log</h2>
+      <p style="margin:0 0 8px;color:var(--muted);font-size:14px">Every request the browser sends and every response the server returns, in order.</p>
+      <ol class="log" id="log"></ol>
+    </section>
+    <section class="card">
+      <h2 id="dbTitle">Database table: orders</h2>
+      <div class="scroll-x"><table class="data dbt" id="db"></table></div>
+      <p id="dbNote" style="margin:10px 0 0;font-size:14px;color:var(--muted)">Rows are added by the INSERT statement in the view.</p>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Check your understanding</h2>
+    <div id="quiz"></div>
+  </section>
+</main>
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+const $ = s => document.querySelector(s);
+const OPT = {
+  cafe: {
+    table: 'orders', listUrl: '/orders', formUrl: '/orders/new', listFn: 'order_list',
+    title: 'Place an order', listTitle: 'Orders', flash: 'Order received! We will call your name.',
+    fields: [
+      {k: 'customer_name', label: 'Your name', type: 'text', def: 'Marisol'},
+      {k: 'item', label: 'Item', type: 'select', choices: ['Cafecito', 'Cortadito', 'Pastelito de guayaba', 'Cuban sandwich'], def: 'Cafecito'},
+      {k: 'quantity', label: 'Quantity (1 to 20)', type: 'text', def: '2'}
+    ],
+    cols: ['id', 'customer_name', 'item', 'quantity', 'status'],
+    validate(f) {
+      const e = [];
+      if (!f.customer_name.trim()) e.push('Please enter your name.');
+      const q = /^\s*-?\d+\s*$/.test(f.quantity) ? parseInt(f.quantity, 10) : null;
+      if (q === null || q < 1 || q > 20) e.push('Quantity must be a whole number from 1 to 20.');
+      return e;
+    },
+    row(f) { return {customer_name: f.customer_name.trim(), item: f.item, quantity: parseInt(f.quantity, 10), status: 'received'}; },
+    rowText(r) { return [r.customer_name + ': ' + r.quantity + ' x ' + r.item, r.status]; },
+    code(prg) {
+      const L = [
+        ['route', '@app.route("/orders/new", methods=["GET", "POST"])'],
+        ['def', 'def new_order():'],
+        ['ifpost', '    if request.method == "POST":'],
+        ['read', '        name = request.form.get("customer_name", "").strip()'],
+        ['read', '        item = request.form.get("item", "")'],
+        ['read', '        quantity = request.form.get("quantity", type=int)'],
+        ['val', '        errors = []'],
+        ['val', '        if not name:'],
+        ['val', '            errors.append("Please enter your name.")'],
+        ['val', '        if quantity is None or not 1 <= quantity <= 20:'],
+        ['val', '            errors.append("Quantity must be a whole number from 1 to 20.")'],
+        ['iferr', '        if errors:'],
+        ['rerender', '            return render_template("new_order.html", errors=errors, form=request.form)'],
+        ['insert', '        db = get_db()'],
+        ['insert', '        db.execute('],
+        ['insert', '            "INSERT INTO orders (customer_name, item, quantity, status) VALUES (?, ?, ?, ?)",'],
+        ['insert', '            (name, item, quantity, "received"),'],
+        ['insert', '        )'],
+        ['commit', '        db.commit()']
+      ];
+      if (prg) L.push(['flash', '        flash("Order received! We will call your name.")'], ['redirect', '        return redirect(url_for("order_list"))']);
+      else L.push(['select', '        orders = db.execute("SELECT * FROM orders ORDER BY id DESC").fetchall()'], ['renderlist', '        return render_template("orders.html", orders=orders, message="Order received!")']);
+      L.push(['getform', '    return render_template("new_order.html", errors=[], form={})'], ['', ''],
+        ['lroute', '@app.route("/orders")'], ['ldef', 'def order_list():'],
+        ['lsel', '    orders = get_db().execute("SELECT * FROM orders ORDER BY id DESC").fetchall()'],
+        ['lret', '    return render_template("orders.html", orders=orders)']);
+      return L;
+    }
+  },
+  salon: {
+    table: 'appointments', listUrl: '/appointments', formUrl: '/appointments/new', listFn: 'appointment_list',
+    title: 'Book an appointment', listTitle: 'My appointments', flash: 'Appointment requested! We will confirm it soon.',
+    fields: [
+      {k: 'client_name', label: 'Your name', type: 'text', def: 'Daniela'},
+      {k: 'service', label: 'Service', type: 'select', choices: ['Haircut', 'Blowout', 'Manicure', 'Color touch-up'], def: 'Haircut'},
+      {k: 'date', label: 'Date', type: 'date', def: ''},
+      {k: 'time', label: 'Time', type: 'select', choices: ['08:00', '09:00', '10:30', '13:00', '15:30', '17:30', '19:00'], def: '10:30'}
+    ],
+    cols: ['id', 'client_name', 'service', 'date', 'time', 'status'],
+    validate(f) {
+      const e = [];
+      if (!f.client_name.trim()) e.push('Please enter your name.');
+      if (!f.date) e.push('Please choose a date.');
+      if (f.time < '09:00' || f.time > '17:30') e.push('Choose a time between 9:00 and 17:30.');
+      return e;
+    },
+    row(f) { return {client_name: f.client_name.trim(), service: f.service, date: f.date, time: f.time, status: 'requested'}; },
+    rowText(r) { return [r.client_name + ': ' + r.service + ', ' + r.date + ' ' + r.time, r.status]; },
+    code(prg) {
+      const L = [
+        ['route', '@app.route("/appointments/new", methods=["GET", "POST"])'],
+        ['def', 'def new_appointment():'],
+        ['ifpost', '    if request.method == "POST":'],
+        ['read', '        name = request.form.get("client_name", "").strip()'],
+        ['read', '        service = request.form.get("service", "")'],
+        ['read', '        date = request.form.get("date", "")'],
+        ['read', '        time = request.form.get("time", "")'],
+        ['val', '        errors = []'],
+        ['val', '        if not name:'],
+        ['val', '            errors.append("Please enter your name.")'],
+        ['val', '        if not date:'],
+        ['val', '            errors.append("Please choose a date.")'],
+        ['val', '        if time < "09:00" or time > "17:30":  # "HH:MM" text compares correctly'],
+        ['val', '            errors.append("Choose a time between 9:00 and 17:30.")'],
+        ['iferr', '        if errors:'],
+        ['rerender', '            return render_template("new_appointment.html", errors=errors, form=request.form)'],
+        ['insert', '        db = get_db()'],
+        ['insert', '        db.execute('],
+        ['insert', '            "INSERT INTO appointments (client_name, service, date, time, status)"'],
+        ['insert', '            " VALUES (?, ?, ?, ?, ?)",'],
+        ['insert', '            (name, service, date, time, "requested"),'],
+        ['insert', '        )'],
+        ['commit', '        db.commit()']
+      ];
+      if (prg) L.push(['flash', '        flash("Appointment requested! We will confirm it soon.")'], ['redirect', '        return redirect(url_for("appointment_list"))']);
+      else L.push(['select', '        rows = db.execute("SELECT * FROM appointments ORDER BY id DESC").fetchall()'], ['renderlist', '        return render_template("appointments.html", appointments=rows, message="Appointment requested!")']);
+      L.push(['getform', '    return render_template("new_appointment.html", errors=[], form={})'], ['', ''],
+        ['lroute', '@app.route("/appointments")'], ['ldef', 'def appointment_list():'],
+        ['lsel', '    rows = get_db().execute("SELECT * FROM appointments ORDER BY id DESC").fetchall()'],
+        ['lret', '    return render_template("appointments.html", appointments=rows)']);
+      return L;
+    }
+  }
+};
+
+const S = {opt: 'cafe', mode: 'prg', rows: [], nextId: 1, page: 'form', url: '', lastReq: 'GET', errors: [], form: {}, flash: null, message: null, busy: false, logN: 0, dupId: null, confirm: false};
+let queue = [], waiting = null;
+
+function today() { const d = new Date(); return d.toISOString().slice(0, 10); }
+function O() { return OPT[S.opt]; }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c])); }
+
+function defaults() { const f = {}; O().fields.forEach(x => f[x.k] = x.type === 'date' ? today() : x.def); return f; }
+
+function renderCode(keys) {
+  const L = O().code(S.mode === 'prg');
+  $('#code').innerHTML = L.map((l, i) => `<div class="${keys && keys.includes(l[0]) && l[0] ? 'hl' : ''}"><span class="ln">${i + 1}</span>${esc(l[1])}</div>`).join('');
+  const first = $('#code .hl'); if (first) first.scrollIntoView({block: 'nearest', inline: 'nearest'});
+}
+function setMsg(text, cls) {
+  const m = $('#msg'); m.textContent = text; m.className = 'msg ' + (cls || '');
+  if (hasGSAP) gsap.fromTo(m, {x: cls === 'req' ? -60 : 60, opacity: 0}, {x: 0, opacity: 1, duration: 0.45, ease: 'power2.out'});
+}
+function narr(t) { $('#narr').innerHTML = t; }
+function log(t) { S.logN++; const li = document.createElement('li'); li.innerHTML = `<span class="n">${S.logN}</span><span>${esc(t)}</span>`; $('#log').appendChild(li); li.scrollIntoView({block: 'nearest'}); }
+
+function renderDB() {
+  const o = O();
+  $('#dbTitle').textContent = 'Database table: ' + o.table;
+  let h = '<tr>' + o.cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
+  if (!S.rows.length) h += `<tr><td colspan="${o.cols.length}" style="color:var(--muted)">No rows yet</td></tr>`;
+  S.rows.forEach(r => { h += '<tr>' + o.cols.map(c => `<td class="${r.dup ? 'dup' : ''}">${esc(r[c])}</td>`).join('') + '</tr>'; });
+  $('#db').innerHTML = h;
+  const dups = S.rows.filter(r => r.dup).length;
+  $('#dbNote').innerHTML = dups ? `<b style="color:var(--warn)">Duplicate rows: ${dups}.</b> The same form data was inserted again because the browser repeated a POST.` : 'Rows are added by the INSERT statement in the view.';
+}
+
+function renderPage() {
+  const o = O();
+  $('#addr').textContent = '127.0.0.1:5000' + S.url;
+  let h = '';
+  if (S.confirm) {
+    h += `<div class="modal" role="alertdialog" aria-label="Confirm form resubmission"><p><b>Confirm form resubmission</b></p><p>The page you are looking for used information that you entered. Returning to that page might cause any action you took to be repeated. Do you want to continue?</p>
+      <button type="button" class="btn primary" id="cfYes">Continue</button> <button type="button" class="btn" id="cfNo">Cancel</button></div>`;
+  }
+  if (S.page === 'form') {
+    h += `<h3>${o.title}</h3>`;
+    if (S.errors.length) h += `<div class="errbox" role="alert">Please fix the following:<ul>${S.errors.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>`;
+    h += '<form id="theForm" novalidate>';
+    o.fields.forEach(f => {
+      const v = S.form[f.k] ?? '';
+      if (f.type === 'select') h += `<div class="field"><label for="f_${f.k}">${f.label}</label><select id="f_${f.k}" name="${f.k}">${f.choices.map(c => `<option${c === v ? ' selected' : ''}>${c}</option>`).join('')}</select></div>`;
+      else h += `<div class="field"><label for="f_${f.k}">${f.label}</label><input id="f_${f.k}" name="${f.k}" type="${f.type === 'date' ? 'date' : 'text'}" value="${esc(v)}"></div>`;
+    });
+    h += `<button type="submit" class="btn primary" ${S.busy ? 'disabled' : ''}>${S.opt === 'cafe' ? 'Place order' : 'Request appointment'}</button></form>`;
+  } else {
+    h += `<h3>${o.listTitle}</h3>`;
+    if (S.flash) h += `<div class="flash" role="status">${esc(S.flash)}</div>`;
+    if (S.message) h += `<div class="flash" role="status">${esc(S.message)}</div>`;
+    h += '<ul class="rows">' + (S.rows.length ? [...S.rows].reverse().map(r => { const t = o.rowText(r); return `<li class="${r.dup ? 'dup' : ''}"><span>#${r.id} ${esc(t[0])}</span><span class="pill">${esc(t[1])}</span></li>`; }).join('') : '<li>No rows yet</li>') + '</ul>';
+  }
+  $('#page').innerHTML = h;
+  const fm = $('#theForm'); if (fm) fm.addEventListener('submit', e => { e.preventDefault(); if (!S.busy) submitForm(); });
+  if (S.confirm) { $('#cfYes').onclick = () => { S.confirm = false; resubmit(); }; $('#cfNo').onclick = () => { S.confirm = false; renderPage(); narr('You pressed Cancel, so nothing was sent. The page stays as it was.'); }; }
+  $('#refreshBtn').disabled = S.busy; $('#goFormBtn').disabled = S.busy;
+}
+
+function readForm() { const f = {}; O().fields.forEach(x => { const el = document.getElementById('f_' + x.k); f[x.k] = el ? el.value : ''; }); return f; }
+
+// ---- step engine
+function run(steps) { queue = steps.slice(); S.busy = true; renderPage(); tick(); }
+function tick() {
+  if (!queue.length) { S.busy = false; $('#nextBtn').disabled = true; renderPage(); return; }
+  const st = queue.shift();
+  if (st.msg) setMsg(st.msg, st.cls);
+  if (st.log) log(st.log);
+  renderCode(st.lines || []);
+  if (st.apply) st.apply();
+  narr(st.narr);
+  renderDB(); renderPage();
+  if ($('#stepMode').checked && queue.length) { $('#nextBtn').disabled = false; waiting = true; }
+  else setTimeout(tick, parseInt($('#speed').value, 10));
+}
+$('#nextBtn').addEventListener('click', () => { if (waiting) { waiting = false; $('#nextBtn').disabled = true; tick(); } });
+
+function submitForm() {
+  const o = O(), f = readForm(); S.form = f;
+  const errs = o.validate(f);
+  const body = o.fields.map(x => x.k + '=' + encodeURIComponent(f[x.k] || '')).join('&');
+  const steps = [
+    {msg: '→ POST ' + o.formUrl, cls: 'req', log: 'Browser → POST ' + o.formUrl + '   ' + body, lines: ['route', 'def', 'ifpost'],
+      narr: `The browser sends a <b>POST</b> request to <code>${o.formUrl}</code> with the form fields in the request body. Flask matches the route, and <code>request.method</code> is "POST", so the form-handling branch runs.`,
+      apply() { S.lastReq = 'POST'; S.flash = null; S.message = null; }},
+    {lines: ['read'], narr: 'The view reads each field from <code>request.form</code>. <code>.get()</code> returns a default instead of crashing when a field is missing, and <code>type=int</code> turns the text into a number (or None if it is not a whole number).'},
+    {lines: ['val'], narr: errs.length ? `Validation runs on the server and finds <b>${errs.length} problem${errs.length > 1 ? 's' : ''}</b>. Never trust the browser: anyone can send any data to your route.` : 'Validation runs on the server. Every rule passes, so the errors list stays empty.'}
+  ];
+  if (errs.length) {
+    steps.push({lines: ['iferr', 'rerender'], msg: '← 200 OK (form with errors)', cls: 'res2', log: 'Server → 200 OK   form page re-rendered with ' + errs.length + ' error message' + (errs.length > 1 ? 's' : ''),
+      narr: 'Because there are errors, the view <b>re-renders the same form</b> with the messages and the values the user already typed (<code>form=request.form</code>). Nothing is saved, and no redirect happens. Fix the fields and submit again.',
+      apply() { S.errors = errs; S.page = 'form'; S.url = o.formUrl; }});
+  } else {
+    steps.push({lines: ['insert', 'commit'], narr: 'The data is valid, so the view runs a parameterized INSERT (the <code>?</code> placeholders keep it safe) and <code>commit()</code> saves the row for good.',
+      apply() { S.errors = []; const r = o.row(f); r.id = S.nextId++; S.rows.push(r); }});
+    if (S.mode === 'prg') {
+      steps.push({lines: ['flash'], narr: '<code>flash()</code> stores a one-time message in the session. It will be shown on the <b>next</b> page the browser loads, then removed.'});
+      steps.push({lines: ['redirect'], msg: '← 302 Found  Location: ' + o.listUrl, cls: 'res3', log: 'Server → 302 Found   Location: ' + o.listUrl,
+        narr: `Instead of sending a page, the server answers <b>302 Found</b> with a <code>Location</code> header. This tells the browser: "go and GET <code>${o.listUrl}</code> instead."`});
+      steps.push({lines: ['lroute', 'ldef', 'lsel'], msg: '→ GET ' + o.listUrl, cls: 'req', log: 'Browser → GET ' + o.listUrl + '   (followed the redirect automatically)',
+        narr: `The browser follows the redirect on its own and sends a fresh <b>GET</b> request to <code>${o.listUrl}</code>. Its last request is now a GET, not a POST.`, apply() { S.lastReq = 'GET'; }});
+      steps.push({lines: ['lret'], msg: '← 200 OK (list page)', cls: 'res2', log: 'Server → 200 OK   list page with the flash message',
+        narr: `The list page arrives with the flash message. Look at the address bar: it shows <code>${o.listUrl}</code>. Now press <b>Refresh (F5)</b> and see what happens.`,
+        apply() { S.page = 'list'; S.url = o.listUrl; S.flash = o.flash; }});
+    } else {
+      steps.push({lines: ['select', 'renderlist'], msg: '← 200 OK (list page)', cls: 'res2', log: 'Server → 200 OK   list page rendered directly after the POST',
+        narr: `The view renders the list page <b>directly</b> after the POST. It looks fine, but the address bar still shows <code>${o.formUrl}</code> and the browser's last request was a <b>POST</b>. Press <b>Refresh (F5)</b> to see the problem.`,
+        apply() { S.page = 'list'; S.url = o.formUrl; S.message = S.opt === 'cafe' ? 'Order received!' : 'Appointment requested!'; }});
+    }
+  }
+  run(steps);
+}
+
+function refresh() {
+  const o = O();
+  if (S.lastReq === 'POST' && S.page === 'list') { S.confirm = true; renderPage(); narr('The browser warns you: refreshing will <b>repeat the last POST</b>. Many users press Continue without reading. Try it.'); return; }
+  if (S.lastReq === 'POST' && S.page === 'form') { S.confirm = true; renderPage(); narr('The last request was a POST that failed validation. Refreshing would send the same invalid data again.'); return; }
+  const url = S.url;
+  if (S.page === 'list') {
+    run([{msg: '→ GET ' + url, cls: 'req', log: 'Browser → GET ' + url + '   (refresh)', lines: ['lroute', 'ldef', 'lsel'], narr: 'Refresh repeats the last request, which was a harmless <b>GET</b>. The server just reads the list again.'},
+      {msg: '← 200 OK (list page)', cls: 'res2', log: 'Server → 200 OK   list page', lines: ['lret'], narr: 'Same rows, no duplicates. The flash message is gone because flash messages appear only once. This is why the post, redirect, get pattern exists.', apply() { S.flash = null; }}]);
+  } else {
+    run([{msg: '→ GET ' + o.formUrl, cls: 'req', log: 'Browser → GET ' + o.formUrl + '   (refresh)', lines: ['route', 'def', 'getform'], narr: 'Refreshing the empty form just asks for it again with GET.'},
+      {msg: '← 200 OK (form)', cls: 'res2', log: 'Server → 200 OK   empty form', lines: ['getform'], narr: 'A fresh, empty form. Nothing was saved.', apply() { S.errors = []; S.form = defaults(); }}]);
+  }
+}
+function resubmit() {
+  const o = O(), f = S.form;
+  const errs = o.validate(f);
+  const steps = [{msg: '→ POST ' + o.formUrl, cls: 'req', log: 'Browser → POST ' + o.formUrl + '   (resubmitted on refresh)', lines: ['route', 'def', 'ifpost', 'read', 'val'], narr: 'You pressed Continue, so the browser sends the <b>same POST again</b>, with the same form data.'}];
+  if (errs.length) {
+    steps.push({lines: ['iferr', 'rerender'], msg: '← 200 OK (form with errors)', cls: 'res2', log: 'Server → 200 OK   same errors again', narr: 'The same invalid data fails validation again. No harm done this time, but the user is confused.'});
+  } else {
+    steps.push({lines: ['insert', 'commit'], narr: '<b>The INSERT runs a second time.</b> The server cannot tell this is a repeat: it is a brand new POST.', apply() { const r = o.row(f); r.id = S.nextId++; r.dup = true; S.rows.push(r); }});
+    steps.push({lines: ['select', 'renderlist'], msg: '← 200 OK (list page)', cls: 'res2', log: 'Server → 200 OK   list page, now with a duplicate row',
+      narr: S.opt === 'cafe' ? '<b>Duplicate order!</b> The kitchen will now make the order twice. Switch to "Post, redirect, get" mode, start over, and repeat the experiment.' : '<b>Duplicate booking!</b> The salon calendar now shows the same appointment twice. Switch to "Post, redirect, get" mode, start over, and repeat the experiment.'});
+  }
+  run(steps);
+}
+
+function goForm() {
+  const o = O();
+  run([{msg: '→ GET ' + o.formUrl, cls: 'req', log: 'Browser → GET ' + o.formUrl, lines: ['route', 'def', 'ifpost'], narr: 'Clicking a link sends a <b>GET</b> request. <code>request.method</code> is "GET", so the POST branch is skipped.', apply() { S.lastReq = 'GET'; S.flash = null; S.message = null; }},
+    {msg: '← 200 OK (form)', cls: 'res2', log: 'Server → 200 OK   empty form', lines: ['getform'], narr: 'The last line of the view returns the empty form. Fill it in and submit.', apply() { S.page = 'form'; S.url = o.formUrl; S.errors = []; S.form = defaults(); }}]);
+}
+
+function reset(keepLog) {
+  queue = []; waiting = null;
+  Object.assign(S, {rows: [], nextId: 1, page: 'form', url: O().formUrl, lastReq: 'GET', errors: [], form: defaults(), flash: null, message: null, busy: false, confirm: false});
+  if (!keepLog) { S.logN = 0; $('#log').innerHTML = ''; }
+  setMsg('waiting', ''); renderCode([]); renderDB(); renderPage();
+  narr(S.mode === 'prg' ? 'Mode: <b>post, redirect, get</b>. Submit the form to start.' : 'Mode: <b>no redirect</b>. The view renders a page straight after the POST. Submit the form, then refresh.');
+}
+
+document.querySelectorAll('[data-opt]').forEach(b => b.addEventListener('click', () => { if (S.busy) return; S.opt = b.dataset.opt; document.querySelectorAll('[data-opt]').forEach(x => x.setAttribute('aria-pressed', x === b)); reset(); }));
+document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { if (S.busy) return; S.mode = b.dataset.mode; document.querySelectorAll('[data-mode]').forEach(x => x.setAttribute('aria-pressed', x === b)); reset(); }));
+$('#resetBtn').addEventListener('click', () => { if (!S.busy) reset(); });
+$('#refreshBtn').addEventListener('click', () => { if (!S.busy) refresh(); });
+$('#goFormBtn').addEventListener('click', () => { if (!S.busy) goForm(); });
+
+// ---- quick check
+const QUIZ = [
+  {q: 'After a successful POST, what should a Flask view usually return?', o: ['render_template() of the list page', 'redirect(url_for(...)) to another page', 'The form again, empty', 'Nothing, Flask handles it'], a: 1, e: 'Redirecting after a successful POST means a refresh repeats a harmless GET instead of the POST.'},
+  {q: 'What HTTP status code does redirect() send by default?', o: ['200 OK', '302 Found', '404 Not Found', '500 Internal Server Error'], a: 1, e: 'redirect() answers 302 Found with a Location header, and the browser follows it with a GET.'},
+  {q: 'Validation fails. What should the view do?', o: ['Redirect to the list page', 'Re-render the form with error messages and the typed values', 'Insert the row anyway and flash a warning', 'Return a blank page'], a: 1, e: 'Re-render the same form so the user sees what to fix without retyping everything. Nothing is saved.'},
+  {q: 'Why is validation done on the server even if the HTML form has "required" fields?', o: ['Because browsers ignore HTML attributes', 'Because anyone can send any data straight to your route, skipping the form', 'Because Flask requires it', 'Because it makes pages load faster'], a: 1, e: 'Browser checks are a convenience for users. Only server-side checks protect your data.'},
+  {q: 'When does a flash() message appear?', o: ['On the next page the browser loads, once', 'On every page until the user logs out', 'Only if the view calls render_template right away', 'Never, unless JavaScript is enabled'], a: 0, e: 'flash() stores the message in the session, and get_flashed_messages() in the next template shows and removes it.'}
+];
+function renderQuiz() {
+  $('#quiz').innerHTML = QUIZ.map((x, i) => `<div class="q"><p>${i + 1}. ${x.q}</p><div class="opts">${x.o.map((o, j) => `<button type="button" class="btn" data-q="${i}" data-o="${j}">${o}</button>`).join('')}</div><div class="qfb" id="qfb${i}" aria-live="polite"></div></div>`).join('');
+  document.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.q, j = +b.dataset.o, x = QUIZ[i];
+    document.querySelectorAll(`[data-q="${i}"]`).forEach(z => { z.classList.remove('right', 'wrong'); if (+z.dataset.o === x.a) z.classList.add('right'); });
+    if (j !== x.a) b.classList.add('wrong');
+    $('#qfb' + i).textContent = (j === x.a ? 'Correct. ' : 'Not quite. ') + x.e;
+  }));
+}
+renderQuiz();
+reset();
+</script>
+</body>
+</html>

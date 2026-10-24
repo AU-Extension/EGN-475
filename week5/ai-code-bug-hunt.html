@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Code Bug Hunt</title>
+<meta name="description" content="EGN 475 Week 5 challenge: find the bug in ten Flask snippets suggested by an AI assistant, pick the right fix, and learn why each mistake matters.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+
+  .hud{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;justify-content:space-between;margin:0 0 14px}
+  .prog{flex:1;min-width:180px;height:8px;border-radius:999px;background:#E6E9EE;overflow:hidden}
+  .prog i{display:block;height:100%;width:0;background:var(--au-red);transition:width .3s}
+  .play{display:grid;gap:16px}
+  .play>*{min-width:0}
+  @media(min-width:980px){.play{grid-template-columns:1.35fr 1fr}}
+  .ctx{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+  .codebox{background:var(--code-bg);border-radius:10px;padding:8px 0;overflow-x:auto}
+  .codebox .file{font-family:var(--mono);font-size:12px;color:#8FA3BF;padding:6px 14px 2px;white-space:pre}
+  .codebox button.line{display:block;width:100%;min-width:max-content;text-align:left;font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--code-ink);background:transparent;border:0;border-left:3px solid transparent;padding:0 14px;white-space:pre;cursor:pointer}
+  .codebox button.line:hover:not([disabled]){background:rgba(255,255,255,.07)}
+  .codebox button.line[disabled]{cursor:default}
+  .codebox button.line .ln{display:inline-block;width:2.2em;color:#5B6B82;user-select:none}
+  .codebox button.line.pick{background:rgba(239,68,68,.22);border-left-color:#EF4444}
+  .codebox button.line.bug{background:rgba(250,204,21,.2);border-left-color:#FACC15}
+  .step{font-weight:600;margin:0 0 8px}
+  .fixes{display:flex;flex-direction:column;gap:8px}
+  .fixes button{text-align:left;font-weight:500;line-height:1.45}
+  .fixes button code{font-size:13px;background:#F1F3F6;padding:1px 4px;border-radius:4px}
+  .fixes button.right{background:var(--ok-soft);border-color:#86D3A0}
+  .fixes button.wrong{background:var(--bad-soft);border-color:#F0A3A3}
+  .why{margin-top:12px}
+  .why code{font-size:13px}
+  .done table td:last-child,.done table th:last-child{text-align:right}
+  .tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px}
+  .tag.a{background:#FEF3C7;color:#78350F}.tag.b{background:#EDE9FE;color:#4C1D95}.tag.ab{background:#E0F2FE;color:#0C4A6E}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 5 · Interactive B</div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 5 · Challenge</span>
+    <h1>AI code bug hunt</h1>
+    <p class="lede">Copilot writes code that looks right far more often than it is right. Each snippet below was "suggested by an AI assistant" for a café or salon app, and each hides exactly one bug or security risk. Find the line, choose the fix, and learn the rule behind it.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this challenge</summary>
+    <ol>
+      <li>Read the context and the code. Assume <code>get_db()</code> is the db.py helper from Week 4.</li>
+      <li>Click the line you think contains the bug (5 points if correct).</li>
+      <li>Choose the best fix from the list (5 points if correct).</li>
+      <li>Read the explanation, then go to the next snippet. Ten snippets, 100 points in total.</li>
+    </ol>
+  </details>
+
+  <div class="hud">
+    <div class="score"><span>Score</span><span class="big" id="score">0</span><span style="color:var(--muted)">/ 100</span></div>
+    <div class="prog" aria-hidden="true"><i id="progBar"></i></div>
+    <div id="progTxt" class="pill">Snippet 1 of 10</div>
+  </div>
+
+  <div id="game" class="play">
+    <section class="card">
+      <div class="ctx"><span class="tag" id="tag"></span><h2 id="sTitle" style="margin:0"></h2></div>
+      <p id="sCtx" style="margin:0 0 12px;color:var(--ink-2)"></p>
+      <div class="codebox" id="code" role="group" aria-label="Code lines, click the line with the bug"></div>
+    </section>
+    <aside class="card" aria-live="polite">
+      <p class="step" id="stepTxt">Step 1: click the line with the bug.</p>
+      <div id="lineFb"></div>
+      <div id="fixArea" hidden>
+        <p class="step">Step 2: choose the best fix.</p>
+        <div class="fixes" id="fixes"></div>
+      </div>
+      <div id="whyArea" class="why" hidden></div>
+      <div style="margin-top:14px"><button type="button" class="btn primary" id="nextBtn" hidden>Next snippet</button></div>
+    </aside>
+  </div>
+
+  <section id="done" class="card done" hidden>
+    <h2>Your result</h2>
+    <p class="score"><span class="big" id="finalScore">0</span><span>/ 100</span></p>
+    <p id="finalMsg"></p>
+    <div class="scroll-x"><table class="data" id="summary"></table></div>
+    <p style="margin-top:14px"><button type="button" class="btn primary" id="againBtn">Play again</button></p>
+  </section>
+</main>
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const fmt = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+// lines starting with "#!" are file headers (not clickable)
+const SNIPPETS = [
+  {title: 'Search the menu', tag: 'a', ctx: 'Copilot suggested this view for the search box on the menu page.',
+    lines: ['@app.route("/menu/search")', 'def search_menu():', '    term = request.args.get("q", "")', '    db = get_db()', '    items = db.execute(', '        f"SELECT * FROM menu_items WHERE name LIKE \'%{term}%\'"', '    ).fetchall()', '    return render_template("menu.html", items=items)'],
+    bug: [5],
+    fixes: [['Use a `?` placeholder: `db.execute("SELECT * FROM menu_items WHERE name LIKE ?", (f"%{term}%",))`', true], ['Wrap the value in `str()` inside the f-string', false], ['Call `term.lower()` before building the string', false], ['Change `fetchall()` to `fetchone()`', false]],
+    why: 'Building SQL with an f-string lets the user write part of your query. Searching for `zzz\' OR 1=1 --` returns every row in the table. With a `?` placeholder, sqlite3 sends the text as data, never as SQL. Rule: never put user input into SQL with f-strings, `+`, or `.format()`.'},
+  {title: 'Add a new service', tag: 'b', ctx: 'The staff page has a form that posts to this view. Submitting it shows "405 Method Not Allowed".',
+    lines: ['@app.route("/services/new")', 'def new_service():', '    if request.method == "POST":', '        name = request.form.get("name", "").strip()', '        minutes = request.form.get("duration_minutes", type=int)', '        if not name or not minutes:', '            flash("Name and duration are required.")', '            return render_template("new_service.html")', '        db = get_db()', '        db.execute("INSERT INTO services (name, duration_minutes) VALUES (?, ?)", (name, minutes))', '        db.commit()', '        return redirect(url_for("service_list"))', '    return render_template("new_service.html")'],
+    bug: [0],
+    fixes: [['`@app.route("/services/new", methods=["GET", "POST"])`', true], ['Change `request.method == "POST"` to `request.method == "GET"`', false], ['Replace the decorator with `@app.post("/services/new")`', false], ['Rename the function to `new_service_post`', false]],
+    why: 'A Flask route accepts only GET unless you list other methods. The form sends POST, so Flask answers 405 before your code even runs. `@app.post` alone would accept POST but break the GET that shows the empty form, so list both methods.'},
+  {title: 'Place an order', tag: 'a', ctx: 'Customers who type a name and a quantity get a 500 Internal Server Error.',
+    lines: ['@app.route("/orders/new", methods=["GET", "POST"])', 'def new_order():', '    if request.method == "POST":', '        name = request.form.get("customer_name", "").strip()', '        quantity = request.form["quantity"]', '        if not name or quantity < 1:', '            flash("Enter your name and a quantity of at least 1.")', '            return render_template("new_order.html")', '        db = get_db()', '        db.execute("INSERT INTO orders (customer_name, quantity) VALUES (?, ?)", (name, quantity))', '        db.commit()', '        return redirect(url_for("order_list"))', '    return render_template("new_order.html")'],
+    bug: [4, 5],
+    fixes: [['`quantity = request.form.get("quantity", type=int)`, then check `quantity is None or quantity < 1`', true], ['Compare with text instead: `quantity < "1"`', false], ['Read it from `request.args` instead of `request.form`', false], ['Add `quantity = quantity + 0` before the check', false]],
+    why: 'Everything in `request.form` is text. Comparing the text `"2"` with the number `1` raises `TypeError`, and the user sees a 500 error. `get(..., type=int)` converts the value and returns `None` for input like "abc", which your check then rejects politely.'},
+  {title: 'Book an appointment', tag: 'b', ctx: 'Bookings save correctly, but the salon keeps finding the same appointment twice in the calendar.',
+    lines: ['@app.route("/appointments/new", methods=["GET", "POST"])', 'def new_appointment():', '    if request.method == "POST":', '        name = request.form.get("client_name", "").strip()', '        service_id = request.form.get("service_id", type=int)', '        if not name or service_id is None:', '            flash("Please enter your name and pick a service.")', '            return render_template("new_appointment.html")', '        db = get_db()', '        db.execute("INSERT INTO appointments (client_name, service_id, status) VALUES (?, ?, ?)", (name, service_id, "requested"))', '        db.commit()', '        rows = db.execute("SELECT * FROM appointments").fetchall()', '        return render_template("appointments.html", appointments=rows)', '    return render_template("new_appointment.html")'],
+    bug: [11, 12],
+    fixes: [['`flash("Appointment requested!")` then `return redirect(url_for("appointment_list"))`', true], ['Call `db.commit()` a second time', false], ['Use `fetchone()` instead of `fetchall()`', false], ['Return the empty form template instead', false]],
+    why: 'Rendering a page straight after a POST leaves the POST as the browser\'s last request. When the client presses refresh, the browser sends the same POST again and the INSERT runs twice. Post, redirect, get fixes it: after saving, redirect so the last request is a harmless GET.'},
+  {title: 'Mark an order ready', tag: 'a', ctx: 'The kitchen presses "Ready" and gets a BuildError page.',
+    lines: ['@app.route("/kitchen")', 'def kitchen_board():', '    orders = get_db().execute("SELECT * FROM orders WHERE status != ?", ("picked up",)).fetchall()', '    return render_template("kitchen.html", orders=orders)', '', '@app.route("/orders/<int:order_id>/ready", methods=["POST"])', 'def mark_ready(order_id):', '    db = get_db()', '    db.execute("UPDATE orders SET status = ? WHERE id = ?", ("ready", order_id))', '    db.commit()', '    return redirect(url_for("kitchen"))'],
+    bug: [10],
+    fixes: [['`return redirect(url_for("kitchen_board"))`', true], ['`return redirect(url_for("/kitchen"))`', false], ['`return redirect(url_for("kitchen.html"))`', false], ['`return redirect("kitchen_board")`', false]],
+    why: '`url_for()` takes the name of the view function (the endpoint), not the URL and not the template. There is no function called `kitchen`, so Flask raises `BuildError`. The function is `kitchen_board`.'},
+  {title: 'Show the order list', tag: 'a', ctx: 'There are orders in the database, but the page shows an empty list and no error.',
+    lines: ['#! app.py', '@app.route("/orders")', 'def order_list():', '    rows = get_db().execute("SELECT * FROM orders ORDER BY id DESC").fetchall()', '    return render_template("orders.html", orders=rows)', '#! templates/orders.html', '{% extends "base.html" %}', '{% block content %}', '  <h1>Orders</h1>', '  <ul>', '  {% for order in order %}', '    <li>{{ order["customer_name"] }}: {{ order["status"] }}</li>', '  {% endfor %}', '  </ul>', '{% endblock %}'],
+    bug: [10],
+    fixes: [['`{% for order in orders %}`', true], ['Add `{{ orders }}` above the loop', false], ['Change `ORDER BY id DESC` to `ORDER BY id`', false], ['Replace `order["customer_name"]` with `order.customer_name`', false]],
+    why: 'Jinja treats an unknown name as empty instead of crashing, so a typo makes the loop run zero times and the list silently disappears. The view passes `orders`, so the loop must be `for order in orders`. When a page is blank, compare template names with the variables you passed.'},
+  {title: 'Delete an appointment', tag: 'b', ctx: 'Appointments sometimes vanish on their own. Look at how deleting works.',
+    lines: ['#! app.py', '@app.route("/appointments/<int:appointment_id>/delete")', 'def delete_appointment(appointment_id):', '    db = get_db()', '    db.execute("DELETE FROM appointments WHERE id = ?", (appointment_id,))', '    db.commit()', '    flash("Appointment deleted.")', '    return redirect(url_for("appointment_list"))', '#! templates/appointments.html', '<a href="{{ url_for(\'delete_appointment\', appointment_id=a[\'id\']) }}">Delete</a>'],
+    bug: [1, 9],
+    fixes: [['Add `methods=["POST"]` to the route and use a small form with a Delete button instead of a link', true], ['Change `DELETE FROM` to `UPDATE`', false], ['Remove `db.commit()`', false], ['Add `target="_blank"` to the link', false]],
+    why: 'A GET request should never change data. Link previews, browser prefetching, crawlers, or an old bookmark can visit a GET link without anyone clicking Delete. Make destructive routes POST only (a GET then gets 405) and trigger them from a form with a button.'},
+  {title: 'Register a new customer', tag: 'ab', ctx: 'Registration works. A classmate opens the database file and gasps.',
+    lines: ['@app.route("/register", methods=["GET", "POST"])', 'def register():', '    if request.method == "POST":', '        username = request.form.get("username", "").strip()', '        password = request.form.get("password", "")', '        if not username or len(password) < 8:', '            flash("Username required, password at least 8 characters.")', '            return render_template("register.html")', '        db = get_db()', '        try:', '            db.execute(', '                "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",', '                (username, password, "customer"),', '            )', '            db.commit()', '        except db.IntegrityError:', '            flash(f"User {username} is already registered.")', '            return render_template("register.html")', '        return redirect(url_for("login"))', '    return render_template("register.html")'],
+    bug: [12],
+    fixes: [['`(username, generate_password_hash(password), "customer")`', true], ['`(username, str(hash(password)), "customer")`', false], ['`(username, password.upper(), "customer")`', false], ['Keep the password in `session` instead of the database', false]],
+    why: 'The real password is stored in plain text, so anyone who sees the database or a backup knows every password (and people reuse passwords). `generate_password_hash()` from `werkzeug.security` stores a salted scrypt hash such as `scrypt:32768:8:1$...`. Python\'s built-in `hash()` is not a password hash: it changes every time the program restarts.'},
+  {title: 'Log in', tag: 'ab', ctx: 'Passwords are now hashed at registration, but nobody can log in anymore.',
+    lines: ['@app.route("/login", methods=["GET", "POST"])', 'def login():', '    if request.method == "POST":', '        username = request.form.get("username", "").strip()', '        password = request.form.get("password", "")', '        user = get_db().execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()', '        if user is None or user["password_hash"] != password:', '            flash("Incorrect username or password.")', '            return render_template("login.html")', '        session.clear()', '        session["user_id"] = user["id"]', '        session["role"] = user["role"]', '        return redirect(url_for("index"))', '    return render_template("login.html")'],
+    bug: [6],
+    fixes: [['`if user is None or not check_password_hash(user["password_hash"], password):`', true], ['Hash the typed password with `generate_password_hash(password)` and compare with `!=`', false], ['Use `==` instead of `!=`', false], ['Remove `session.clear()`', false]],
+    why: 'The database holds a hash, so comparing it with the typed password never matches. Hashing again with `generate_password_hash()` does not help either, because every hash gets a new random salt. `check_password_hash(stored_hash, typed_password)` is the correct way to check.'},
+  {title: 'Change an appointment status', tag: 'b', ctx: 'Staff press "Confirm" on the calendar and the server crashes with a TypeError.',
+    lines: ['@app.route("/appointments/<int:appointment_id>/status", methods=["POST"])', 'def update_status(id):', '    new_status = request.form.get("status", "")', '    if new_status not in ("requested", "confirmed", "completed", "canceled"):', '        flash("Unknown status.")', '        return redirect(url_for("staff_calendar"))', '    db = get_db()', '    db.execute("UPDATE appointments SET status = ? WHERE id = ?", (new_status, id))', '    db.commit()', '    return redirect(url_for("staff_calendar"))'],
+    bug: [1, 0],
+    fixes: [['`def update_status(appointment_id):` and use `appointment_id` in the UPDATE', true], ['Change `<int:appointment_id>` to `<appointment_id>`', false], ['Give the parameter a default: `def update_status(id=None):`', false], ['Read the id with `request.args.get("id")`', false]],
+    why: 'Flask passes each URL variable as a keyword argument with exactly the same name. The URL defines `appointment_id`, but the function expects `id`, so Python raises `TypeError: update_status() got an unexpected keyword argument \'appointment_id\'`. Keep the names identical.'}
+];
+const TAGTXT = {a: 'Option A: café', b: 'Option B: salon', ab: 'Both options'};
+let i = 0, score = 0, phase = 'line', results = [];
+
+function shuffle(a) { const b = a.slice(); for (let k = b.length - 1; k > 0; k--) { const r = Math.floor(Math.random() * (k + 1)); [b[k], b[r]] = [b[r], b[k]]; } return b; }
+
+function show() {
+  const s = SNIPPETS[i]; phase = 'line';
+  results[i] = {line: 0, fix: 0};
+  $('#tag').className = 'tag ' + s.tag; $('#tag').textContent = TAGTXT[s.tag];
+  $('#sTitle').textContent = s.title; $('#sCtx').textContent = s.ctx;
+  let n = 0;
+  $('#code').innerHTML = s.lines.map((l, idx) => l.startsWith('#! ') ? `<div class="file"># ${esc(l.slice(3))}</div>` : `<button type="button" class="line" data-i="${idx}"><span class="ln">${++n}</span>${esc(l) || ' '}</button>`).join('');
+  document.querySelectorAll('#code button.line').forEach(b => b.addEventListener('click', () => pickLine(+b.dataset.i, b)));
+  $('#stepTxt').textContent = 'Step 1: click the line with the bug.';
+  $('#lineFb').innerHTML = ''; $('#fixArea').hidden = true; $('#whyArea').hidden = true; $('#nextBtn').hidden = true;
+  $('#progTxt').textContent = `Snippet ${i + 1} of ${SNIPPETS.length}`;
+  $('#progBar').style.width = (i / SNIPPETS.length * 100) + '%';
+  if (hasGSAP) gsap.from('#game .card', {y: 12, opacity: 0, duration: .35, stagger: .06});
+}
+function pickLine(idx, btn) {
+  if (phase !== 'line') return;
+  const s = SNIPPETS[i]; phase = 'fix';
+  const ok = s.bug.includes(idx);
+  btn.classList.add(ok ? 'bug' : 'pick');
+  document.querySelectorAll('#code button.line').forEach(b => { b.disabled = true; if (s.bug.includes(+b.dataset.i)) b.classList.add('bug'); });
+  if (ok) { score += 5; results[i].line = 5; }
+  $('#lineFb').innerHTML = ok ? '<div class="feedback ok">Correct line. +5 points.</div>' : '<div class="feedback bad">Not that one. The highlighted yellow line is where the problem is.</div>';
+  updScore();
+  const box = $('#fixes');
+  box.innerHTML = shuffle(s.fixes).map(f => `<button type="button" class="btn" data-ok="${f[1]}">${fmt(f[0])}</button>`).join('');
+  box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => pickFix(b)));
+  $('#fixArea').hidden = false;
+  $('#stepTxt').textContent = 'Step 1 done.';
+  const first = box.querySelector('button'); if (first) first.focus();
+}
+function pickFix(btn) {
+  if (phase !== 'fix') return;
+  phase = 'done';
+  const ok = btn.dataset.ok === 'true';
+  document.querySelectorAll('#fixes button').forEach(b => { b.disabled = true; if (b.dataset.ok === 'true') b.classList.add('right'); });
+  if (!ok) btn.classList.add('wrong');
+  if (ok) { score += 5; results[i].fix = 5; }
+  updScore();
+  $('#whyArea').innerHTML = `<div class="feedback ${ok ? 'ok' : 'bad'}">${ok ? 'Right fix. +5 points.' : 'That would not fix it. The green option is the right fix.'}</div><div class="feedback info"><b>Why:</b> ${fmt(SNIPPETS[i].why)}</div>`;
+  $('#whyArea').hidden = false;
+  $('#nextBtn').hidden = false; $('#nextBtn').textContent = i === SNIPPETS.length - 1 ? 'See my result' : 'Next snippet'; $('#nextBtn').focus();
+}
+function updScore() { $('#score').textContent = score; if (hasGSAP) gsap.fromTo('#score', {scale: 1.25}, {scale: 1, duration: .3}); }
+function finish() {
+  $('#game').hidden = true; $('#done').hidden = false; $('#progBar').style.width = '100%'; $('#progTxt').textContent = 'Finished';
+  $('#finalScore').textContent = score;
+  $('#finalMsg').textContent = score >= 90 ? 'Excellent. You review AI code like a professional.' : score >= 70 ? 'Good work. Reread the explanations for the snippets you missed: these bugs will appear in your own app.' : 'Keep practicing. Play again and read every explanation slowly. Spotting these patterns is the core skill of working with Copilot.';
+  $('#summary').innerHTML = '<tr><th>#</th><th>Snippet</th><th>Line</th><th>Fix</th><th>Points</th></tr>' + SNIPPETS.map((s, k) => `<tr><td>${k + 1}</td><td>${esc(s.title)}</td><td>${results[k].line ? 'yes' : 'no'}</td><td>${results[k].fix ? 'yes' : 'no'}</td><td>${results[k].line + results[k].fix}</td></tr>`).join('') + `<tr><th></th><th>Total</th><th></th><th></th><th>${score}</th></tr>`;
+  $('#done').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+$('#nextBtn').addEventListener('click', () => { if (i < SNIPPETS.length - 1) { i++; show(); } else finish(); });
+$('#againBtn').addEventListener('click', () => { i = 0; score = 0; results = []; updScore(); $('#game').hidden = false; $('#done').hidden = true; show(); });
+show();
+</script>
+</body>
+</html>

@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session and Login Visualizer</title>
+<meta name="description" content="EGN 475 Week 6 interactive: register, log in, visit protected pages, and tamper with a cookie to see how Flask sessions, password hashes, and role checks work.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:0 0 16px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .seg button{font:inherit;font-size:14px;font-weight:600;border:0;background:transparent;padding:8px 14px;cursor:pointer;color:var(--ink-2)}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .seg-label{font-size:13px;color:var(--muted);font-weight:600;margin-right:6px}
+  .stage{display:grid;gap:16px}
+  .stage>*,.lower>*{min-width:0}
+  @media(min-width:980px){.stage{grid-template-columns:1fr 1.1fr}}
+  .browser{border:1px solid #CBD2DA;border-radius:12px;overflow:hidden;background:#fff}
+  .chrome{background:#EEF1F5;padding:8px 10px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #DDE2E8}
+  .dots{display:flex;gap:5px;flex:none}.dots i{width:10px;height:10px;border-radius:50%;background:#CBD2DA;display:block}
+  .addr{flex:1;min-width:0;background:#fff;border:1px solid #DDE2E8;border-radius:999px;padding:4px 12px;font-family:var(--mono);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .apnav{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px;background:#1F2937}
+  .apnav span{color:#E5E7EB;font-size:13px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.08)}
+  .apnav .brand{background:transparent;color:#fff;padding-left:0}
+  .page{padding:16px;min-height:220px}
+  .page h3{font-size:18px;margin:0 0 10px}
+  .field{margin:0 0 10px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+  .field input{width:100%}
+  .flash{border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:14px;font-weight:600}
+  .flash.bad{background:var(--bad-soft);border:1px solid #F5C2C2;color:#7F1D1D}
+  .flash.ok{background:var(--ok-soft);border:1px solid #BBE5C8;color:#14532D}
+  .big403{font-size:42px;font-weight:700;color:var(--bad);margin:0}
+  .urlbar{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px;border-top:1px solid var(--line);background:#FAFAFB}
+  .urlbar .lab{width:100%;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .urlbar button{font-family:var(--mono);font-size:13px}
+  .jar{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fff}
+  .jar h3{font-size:14px;margin:0 0 6px}
+  .ck{font-family:var(--mono);font-size:12.5px;word-break:break-all;line-height:1.6}
+  .ck .p{background:#E0EAFF;color:#1E3A8A;border-radius:4px;padding:0 2px}
+  .ck .t{background:#EEF1F5;color:#374151;border-radius:4px;padding:0 2px}
+  .ck .s{background:#FEF3C7;color:#78350F;border-radius:4px;padding:0 2px}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:6px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+  .server{display:flex;flex-direction:column;gap:12px}
+  .wire{display:flex;align-items:center;gap:10px;min-height:44px;border:1px dashed #CBD2DA;border-radius:10px;padding:8px 12px;background:#fff;overflow:hidden}
+  .wire .lbl{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;flex:none}
+  .msg{font-family:var(--mono);font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;background:#EEF1F5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .msg.req{background:#E0EAFF;color:#1E3A8A}.msg.ok{background:var(--ok-soft);color:#14532D}.msg.redir{background:var(--warn-soft);color:#7C2D12}.msg.err{background:var(--bad-soft);color:#7F1D1D}
+  .code{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:12.5px;line-height:1.55;border-radius:10px;padding:10px 0;overflow:auto;max-height:340px}
+  .code div{padding:0 14px;white-space:pre;border-left:3px solid transparent}
+  .code div.hl{background:rgba(250,204,21,.18);border-left-color:#FACC15}
+  .code .ln{display:inline-block;width:2.2em;color:#5B6B82;user-select:none}
+  .narr{background:#EEF4FF;border:1px solid #C7D7FE;color:#1E3A8A;border-radius:10px;padding:12px 14px;font-size:15px;min-height:64px}
+  .sess{font-family:var(--mono);font-size:13px;background:#F5F6F8;border:1px solid var(--line);border-radius:8px;padding:8px 10px;word-break:break-all}
+  .lower{display:grid;gap:16px;margin-top:16px}
+  @media(min-width:980px){.lower{grid-template-columns:1.2fr 1fr}}
+  td.hash{font-family:var(--mono);font-size:12px;word-break:break-all}
+  .q{border-top:1px solid var(--line);padding:12px 0}
+  .q:first-of-type{border-top:0}
+  .q p{margin:0 0 8px;font-weight:600}
+  .opts{display:flex;flex-direction:column;gap:6px}
+  .opts button{text-align:left}
+  .opts button.right{background:var(--ok-soft);border-color:#86D3A0}
+  .opts button.wrong{background:var(--bad-soft);border-color:#F0A3A3}
+  .qfb{font-size:14px;margin-top:6px;color:var(--ink-2)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 6 · Interactive A</div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 6 · Explorer</span>
+    <h1>Sessions and login: what really happens</h1>
+    <p class="lede">Register an account, log in, and visit pages that need a login or a staff role. Watch the password become a hash, the session cookie arrive in the browser, and the server check it on every request. Then try to cheat by editing the cookie.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol>
+      <li>Choose your project option. The pages and route names change to match.</li>
+      <li>Register a new account, then log in with it. Watch the users table and the cookie jar.</li>
+      <li>Use the address buttons under the browser to visit the protected pages as a guest, as a customer or client, and as staff (a staff account is already in the database).</li>
+      <li>While logged in as a customer or client, press "Edit the cookie to say staff" and try the staff page again.</li>
+      <li>Finish with the quick check at the bottom.</li>
+    </ol>
+  </details>
+
+  <div class="toolbar">
+    <div><span class="seg-label">Project</span>
+      <span class="seg" role="group" aria-label="Project option">
+        <button type="button" data-opt="cafe" aria-pressed="true">Option A: café</button>
+        <button type="button" data-opt="salon" aria-pressed="false">Option B: salon</button>
+      </span></div>
+    <button type="button" class="btn" id="resetBtn">Start over</button>
+    <span class="pill" id="staffHint"></span>
+  </div>
+
+  <div class="stage">
+    <section class="card" style="padding:16px" aria-labelledby="bT">
+      <h2 id="bT">Browser</h2>
+      <div class="browser">
+        <div class="chrome"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><div class="addr" id="addr">127.0.0.1:5000/</div></div>
+        <div class="apnav" id="apnav" aria-label="App menu as rendered by the template"></div>
+        <div class="page" id="page" aria-live="polite"></div>
+        <div class="urlbar" id="urlbar"><span class="lab">Type an address (visit a URL directly)</span></div>
+      </div>
+      <div class="jar">
+        <h3>Cookie jar for 127.0.0.1</h3>
+        <div class="ck" id="jar"></div>
+        <div class="legend"><span><i style="background:#E0EAFF"></i>data (readable by anyone)</span><span><i style="background:#EEF1F5"></i>timestamp</span><span><i style="background:#FEF3C7"></i>signature (needs the secret key)</span></div>
+        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px">
+          <button type="button" class="btn" id="tamperBtn">Edit the cookie to say staff</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card server" aria-labelledby="sT">
+      <h2 id="sT" style="margin:0">Flask server</h2>
+      <div class="wire" aria-live="polite"><span class="lbl">On the wire</span><span class="msg" id="msg">waiting</span></div>
+      <div class="code" id="code" aria-label="Flask code"></div>
+      <div class="narr" id="narr" aria-live="polite">Start by registering an account or by visiting a page.</div>
+      <div><b style="font-size:14px">session for this request</b><div class="sess" id="sess">{}</div></div>
+      <label style="font-size:14px">Speed <select id="speed"><option value="1300">Slow</option><option value="800" selected>Normal</option><option value="300">Fast</option></select></label>
+    </section>
+  </div>
+
+  <div class="lower">
+    <section class="card">
+      <h2>Database table: users</h2>
+      <div class="scroll-x"><table class="data" id="users"></table></div>
+      <p style="margin:10px 0 0;font-size:14px;color:var(--muted)">Hashes here are simulated in your browser so you can see their shape. Real Werkzeug uses the scrypt algorithm with a random salt.</p>
+    </section>
+    <section class="card">
+      <h2>HTTP log</h2>
+      <ol class="data" id="log" style="font-family:var(--mono);font-size:13px;padding-left:22px;margin:0;max-height:260px;overflow:auto"></ol>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Check your understanding</h2>
+    <div id="quiz"></div>
+  </section>
+</main>
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+// compact SHA-256 (for simulated hashes and signatures)
+function sha256(str) {
+  const s = unescape(encodeURIComponent(str)); const K = []; const H = [];
+  let isPrime = n => { for (let f = 2; f * f <= n; f++) if (n % f === 0) return false; return true; };
+  for (let c = 2, n = 0; n < 64; c++) if (isPrime(c)) { if (n < 8) H[n] = (Math.pow(c, 1 / 2) * 4294967296) | 0; K[n++] = (Math.pow(c, 1 / 3) * 4294967296) | 0; }
+  const words = []; const bl = s.length * 8;
+  for (let i = 0; i < s.length; i++) words[i >> 2] |= s.charCodeAt(i) << (24 - (i % 4) * 8);
+  words[bl >> 5] |= 0x80 << (24 - bl % 32); words[(((bl + 64) >> 9) << 4) + 15] = bl;
+  const rr = (v, a) => (v >>> a) | (v << (32 - a));
+  for (let j = 0; j < words.length; j += 16) {
+    const w = Array.from({length: 16}, (_, k) => words[j + k] | 0); const old = H.slice(0);
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      if (i >= 16) { const w15 = w[i - 15], w2 = w[i - 2]; w[i] = (w[i - 16] + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))) | 0; }
+      const t1 = h + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + (w[i] | 0);
+      const t2 = (rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c));
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    [a, b, c, d, e, f, g, h].forEach((v, k) => H[k] = (old[k] + v) | 0);
+  }
+  return H.map(v => (v >>> 0).toString(16).padStart(8, '0')).join('');
+}
+const SECRET = 'dev-secret-change-me';
+const b64u = s => btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return atob(s); };
+const hexToB64u = hex => b64u(hex.match(/../g).map(x => String.fromCharCode(parseInt(x, 16))).join(''));
+function randSalt(n) { const ch = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; let o = ''; for (let i = 0; i < n; i++) o += ch[Math.floor(Math.random() * ch.length)]; return o; }
+function genHash(pw, salt) { salt = salt || randSalt(16); return `scrypt:32768:8:1$${salt}$${sha256(salt + pw)}${sha256(pw + salt)}`; }
+function checkHash(stored, pw) { const salt = stored.split('$')[1]; return genHash(pw, salt) === stored; }
+function sign(payload, ts) { return hexToB64u(sha256(SECRET + '.' + payload + '.' + ts)).slice(0, 27); }
+function makeCookie(sess) { const p = b64u(JSON.stringify(sess)); const ts = b64u(String.fromCharCode(0x67, 0x1a, Math.floor(Math.random() * 255), Math.floor(Math.random() * 255))); return {p, ts, s: sign(p, ts)}; }
+function readCookie(c) { if (!c) return {ok: true, sess: {}}; if (sign(c.p, c.ts) !== c.s) return {ok: false, sess: {}}; return {ok: true, sess: JSON.parse(unb64u(c.p))}; }
+
+const OPT = {
+  cafe: {app: 'Café Calle Ocho', role: 'customer', roleLabel: 'customer', staffUser: 'maria', staffPw: 'Kitchen2026!', mine: '/orders/mine', mineFn: 'my_orders', mineTitle: 'My orders', staffUrl: '/kitchen', staffFn: 'kitchen_board', staffTitle: 'Kitchen board',
+    mineBody: '<ul><li>#12 Cafecito x2, ready</li><li>#15 Cuban sandwich, preparing</li></ul>', staffBody: '<ul><li>#15 Cuban sandwich: preparing</li><li>#16 Cortadito x3: received</li><li>#17 Pastelito de guayaba: received</li><li>#18 Cafecito: received</li></ul>'},
+  salon: {app: 'Bella Vista Salon', role: 'client', roleLabel: 'client', staffUser: 'sofia', staffPw: 'Salon2026!', mine: '/appointments/mine', mineFn: 'my_appointments', mineTitle: 'My appointments', staffUrl: '/staff/calendar', staffFn: 'staff_calendar', staffTitle: 'Staff calendar',
+    mineBody: '<ul><li>Haircut, Friday 10:30, confirmed</li><li>Manicure, next Tuesday 15:30, requested</li></ul>', staffBody: '<ul><li>09:00 Blowout (Ana): confirmed</li><li>10:30 Haircut (Daniela): confirmed</li><li>13:00 Color touch-up (Rosa): requested</li><li>15:30 Manicure (Lucia): requested</li></ul>'}
+};
+const O = () => OPT[S.opt];
+const S = {opt: 'cafe', users: [], cookie: null, url: '/', view: 'home', flash: null, busy: false, logN: 0, tampered: false};
+
+function code() {
+  const o = O();
+  return [
+    ['imp', 'from functools import wraps'], ['imp', 'from flask import session, redirect, url_for, abort, flash, render_template'], ['imp', 'from werkzeug.security import generate_password_hash, check_password_hash'], ['', ''],
+    ['lr', 'def login_required(view):'], ['lr', '    @wraps(view)'], ['lr', '    def wrapped(**kwargs):'], ['lrc', '        if session.get("user_id") is None:'], ['lrr', '            return redirect(url_for("login"))'], ['lrok', '        return view(**kwargs)'], ['lr', '    return wrapped'], ['', ''],
+    ['sr', 'def staff_required(view):'], ['sr', '    @wraps(view)'], ['sr', '    def wrapped(**kwargs):'], ['src', '        if session.get("role") != "staff":'], ['srr', '            abort(403)'], ['srok', '        return view(**kwargs)'], ['sr', '    return wrapped'], ['', ''],
+    ['rg', '@app.route("/register", methods=["GET", "POST"])'], ['rg', 'def register():'], ['rgv', '    ...  # read the form, check username and password length'], ['rgi', '    db.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",'], ['rgh', `               (username, generate_password_hash(password), "${o.role}"))`], ['rgi', '    db.commit()'], ['rgr', '    return redirect(url_for("login"))'], ['', ''],
+    ['li', '@app.route("/login", methods=["GET", "POST"])'], ['li', 'def login():'], ['lis', '    user = db.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()'], ['lic', '    if user is None or not check_password_hash(user["password_hash"], password):'], ['lif', '        flash("Incorrect username or password.")'], ['lif', '        return render_template("login.html")'], ['lise', '    session.clear()'], ['lise', '    session["user_id"] = user["id"]'], ['lise', '    session["role"] = user["role"]'], ['lir', '    return redirect(url_for("index"))'], ['', ''],
+    ['lo', '@app.route("/logout")'], ['lo', 'def logout():'], ['loc', '    session.clear()'], ['lor', '    return redirect(url_for("index"))'], ['', ''],
+    ['ix', '@app.route("/")'], ['ix', 'def index():'], ['ix', '    return render_template("index.html")'], ['', ''],
+    ['mi', `@app.route("${o.mine}")`], ['mi', '@login_required'], ['mi', `def ${o.mineFn}():`], ['mib', `    ...  # SELECT rows WHERE user_id = session["user_id"]`], ['', ''],
+    ['st', `@app.route("${o.staffUrl}")`], ['st', '@login_required'], ['st', '@staff_required'], ['st', `def ${o.staffFn}():`], ['stb', '    ...  # staff-only page']
+  ];
+}
+function renderCode(keys) {
+  $('#code').innerHTML = code().map((l, i) => `<div class="${l[0] && keys.includes(l[0]) ? 'hl' : ''}"><span class="ln">${i + 1}</span>${esc(l[1])}</div>`).join('');
+  const hl = $('#code .hl'); if (hl) { const box = $('#code'); box.scrollTop = hl.offsetTop - 40; }
+}
+function setMsg(t, cls) { const m = $('#msg'); m.textContent = t; m.className = 'msg ' + (cls || ''); if (hasGSAP) gsap.fromTo(m, {x: cls === 'req' ? -60 : 60, opacity: 0}, {x: 0, opacity: 1, duration: .45}); }
+function narr(t) { $('#narr').innerHTML = t; }
+function log(t) { S.logN++; const li = document.createElement('li'); li.textContent = t; $('#log').appendChild(li); li.scrollIntoView({block: 'nearest'}); }
+function sessView(v) { $('#sess').innerHTML = v; }
+
+function currentSess() { return readCookie(S.cookie); }
+function renderNav() {
+  const o = O(), r = currentSess(), sess = r.sess;
+  let items = [`<span class="brand">${o.app}</span>`, '<span>Home</span>'];
+  if (!sess.user_id) items.push('<span>Register</span>', '<span>Log in</span>');
+  else { items.push(`<span>${o.mineTitle}</span>`); if (sess.role === 'staff') items.push(`<span>${o.staffTitle}</span>`); items.push('<span>Log out</span>'); }
+  $('#apnav').innerHTML = items.join('');
+}
+function renderPage() {
+  const o = O(), sess = currentSess().sess;
+  $('#addr').textContent = '127.0.0.1:5000' + S.url;
+  let h = S.flash ? `<div class="flash ${S.flash[0]}" role="status">${esc(S.flash[1])}</div>` : '';
+  const u = S.users.find(x => x.id === sess.user_id);
+  if (S.view === 'home') h += `<h3>Welcome to ${o.app}</h3><p>${u ? `Logged in as <b>${esc(u.username)}</b> (${u.role}).` : 'You are browsing as a guest.'}</p><p style="font-size:14px;color:var(--muted)">The menu above is drawn by the template, which hides links by role. Hiding a link is not security: the server must check every request.</p>`;
+  else if (S.view === 'register') h += `<h3>Create an account</h3><form id="regF"><div class="field"><label for="ru">Username</label><input id="ru" value="${S.opt === 'cafe' ? 'marisol' : 'daniela'}" autocomplete="off"></div><div class="field"><label for="rp">Password (8 or more characters)</label><input id="rp" type="text" value="Guava2026!"></div><button class="btn primary" type="submit">Register</button></form>`;
+  else if (S.view === 'login') h += `<h3>Log in</h3><form id="logF"><div class="field"><label for="lu">Username</label><input id="lu" value="${esc(S.lastUser || '')}" autocomplete="off"></div><div class="field"><label for="lp">Password</label><input id="lp" type="text" value=""></div><button class="btn primary" type="submit">Log in</button></form><p style="font-size:13px;color:var(--muted);margin:10px 0 0">Staff account already in the database: <code>${o.staffUser}</code> / <code>${o.staffPw}</code></p>`;
+  else if (S.view === 'mine') h += `<h3>${o.mineTitle}</h3>${o.mineBody}`;
+  else if (S.view === 'staff') h += `<h3>${o.staffTitle}</h3>${o.staffBody}`;
+  else if (S.view === '403') h += '<p class="big403">403</p><h3>Forbidden</h3><p>You are logged in, but your role is not allowed to see this page.</p>';
+  $('#page').innerHTML = h;
+  const rf = $('#regF'); if (rf) rf.addEventListener('submit', e => { e.preventDefault(); if (!S.busy) doRegister($('#ru').value.trim(), $('#rp').value); });
+  const lf = $('#logF'); if (lf) lf.addEventListener('submit', e => { e.preventDefault(); if (!S.busy) doLogin($('#lu').value.trim(), $('#lp').value); });
+  renderNav(); renderJar(); renderUsers();
+  document.querySelectorAll('#urlbar button').forEach(b => b.disabled = S.busy);
+  $('#tamperBtn').disabled = S.busy || !S.cookie || currentSess().sess.role === 'staff' || S.tampered;
+}
+function renderJar() {
+  const c = S.cookie;
+  if (!c) { $('#jar').innerHTML = '<span style="color:var(--muted)">No cookies yet.</span>'; return; }
+  let dec = ''; try { dec = unb64u(c.p); } catch (e) { dec = '?'; }
+  $('#jar').innerHTML = `session = <span class="p">${esc(c.p)}</span>.<span class="t">${esc(c.ts)}</span>.<span class="s">${esc(c.s)}</span><br><span style="color:var(--muted)">Decoded data: </span>${esc(dec)}${S.tampered ? ' <b style="color:var(--bad)">(edited by you)</b>' : ''}`;
+}
+function renderUsers() {
+  $('#users').innerHTML = '<tr><th>id</th><th>username</th><th>password_hash</th><th>role</th></tr>' + S.users.map(u => `<tr><td>${u.id}</td><td>${esc(u.username)}</td><td class="hash">${esc(u.hash.slice(0, 54))}...</td><td>${u.role}</td></tr>`).join('');
+}
+function urlButtons() {
+  const o = O();
+  const list = [['/', 'home'], ['/register', 'register'], ['/login', 'login'], [o.mine, 'mine'], [o.staffUrl, 'staff'], ['/logout', 'logout']];
+  $('#urlbar').innerHTML = '<span class="lab">Type an address (visit a URL directly)</span>' + list.map(x => `<button type="button" class="btn" data-go="${x[1]}">${x[0]}</button>`).join('');
+  document.querySelectorAll('#urlbar button').forEach(b => b.addEventListener('click', () => { if (!S.busy) visit(b.dataset.go); }));
+}
+
+let queue = [];
+function run(steps) { queue = steps.slice(); S.busy = true; renderPage(); tick(); }
+function tick() {
+  if (!queue.length) { S.busy = false; renderPage(); return; }
+  const st = queue.shift();
+  if (st.msg) setMsg(st.msg, st.cls);
+  if (st.log) log(st.log);
+  renderCode(st.lines || []);
+  if (st.apply) st.apply();
+  if (st.sess !== undefined) sessView(st.sess);
+  narr(st.narr);
+  renderPage();
+  setTimeout(tick, parseInt($('#speed').value, 10));
+}
+function cookieHdr() { return S.cookie ? '   Cookie: session=' + S.cookie.p.slice(0, 10) + '...' : '   (no cookie)'; }
+function sessText(r) { if (!r.ok) return '<span style="color:var(--bad)">signature does not match: cookie ignored, session = {}</span>'; return esc(JSON.stringify(r.sess)); }
+function checkStep(r) {
+  return {lines: [], sess: sessText(r), narr: !S.cookie ? 'No cookie arrived, so <code>session</code> is an empty dictionary: Flask treats you as a guest.' : r.ok ? 'Flask recomputes the signature with its secret key. It matches, so it trusts the data and fills <code>session</code> from the cookie.' : '<b>The signature does not match the data.</b> Only the server knows the secret key, so an edited cookie cannot be signed correctly. Flask throws the cookie away and <code>session</code> is empty.'};
+}
+
+function visit(where) {
+  const o = O(), r = currentSess();
+  const url = {home: '/', register: '/register', login: '/login', mine: o.mine, staff: o.staffUrl, logout: '/logout'}[where];
+  const steps = [{msg: '→ GET ' + url, cls: 'req', log: 'GET ' + url + cookieHdr(), lines: [], narr: `The browser sends <b>GET ${url}</b>. It automatically attaches every cookie it has for this site.`, apply() { S.flash = null; }}];
+  steps.push(checkStep(r));
+  const sess = r.sess;
+  if (where === 'home') steps.push({msg: '← 200 OK', cls: 'ok', log: '200 OK  home page', lines: ['ix'], narr: 'The home page is public, so no check is needed. The template builds the menu from the session.', apply() { S.url = '/'; S.view = 'home'; }});
+  if (where === 'register') steps.push({msg: '← 200 OK', cls: 'ok', log: '200 OK  register form', lines: ['rg'], narr: 'The register form is public. Fill it in and submit.', apply() { S.url = '/register'; S.view = 'register'; }});
+  if (where === 'login') steps.push({msg: '← 200 OK', cls: 'ok', log: '200 OK  login form', lines: ['li'], narr: 'The login form. Use your new account or the staff account shown under the form.', apply() { S.url = '/login'; S.view = 'login'; }});
+  if (where === 'logout') {
+    steps.push({lines: ['lo', 'loc'], narr: '<code>session.clear()</code> empties the session. When the session is empty, Flask tells the browser to delete the cookie.', sess: '{}'});
+    steps.push({msg: '← 302 Found  Location: /  (cookie deleted)', cls: 'redir', log: '302 Found  Location: /   Set-Cookie: session=; Expires=Thu, 01 Jan 1970', lines: ['lor'], narr: 'The response deletes the cookie and redirects home. You are a guest again.', apply() { S.cookie = null; S.tampered = false; }});
+    steps.push({msg: '→ GET /', cls: 'req', log: 'GET /   (no cookie)', lines: ['ix'], narr: 'The browser follows the redirect without a cookie.'});
+    steps.push({msg: '← 200 OK', cls: 'ok', log: '200 OK  home page', lines: ['ix'], narr: 'Logged out. Try visiting a protected page now.', apply() { S.url = '/'; S.view = 'home'; S.flash = ['ok', 'You have been logged out.']; }});
+  }
+  if (where === 'mine' || where === 'staff') {
+    const fn = where === 'mine' ? 'mi' : 'st';
+    steps.push({lines: [fn, 'lr', 'lrc'], narr: '<code>@login_required</code> runs first. It checks whether <code>session.get("user_id")</code> exists.'});
+    if (!sess.user_id) {
+      steps.push({msg: '← 302 Found  Location: /login', cls: 'redir', log: '302 Found  Location: /login', lines: ['lrr'], narr: 'No user_id in the session, so the decorator <b>redirects to the login page</b> and the real view never runs.'});
+      steps.push({msg: '→ GET /login', cls: 'req', log: 'GET /login' + cookieHdr(), lines: ['li'], narr: 'The browser follows the redirect to the login form.'});
+      steps.push({msg: '← 200 OK', cls: 'ok', log: '200 OK  login form', lines: ['li'], narr: 'Please log in first. This is exactly what a protected page should do for a guest.', apply() { S.url = '/login'; S.view = 'login'; S.flash = ['bad', 'Please log in to see that page.']; }});
+    } else if (where === 'mine') {
+      steps.push({msg: '← 200 OK', cls: 'ok', log: '200 OK  ' + o.mineTitle.toLowerCase(), lines: ['lrok', 'mib'], narr: `Logged in, so the view runs. It uses <code>session["user_id"]</code> to load only <b>your</b> rows.`, apply() { S.url = o.mine; S.view = 'mine'; }});
+    } else {
+      steps.push({lines: ['lrok', 'sr', 'src'], narr: 'You are logged in, so <code>@staff_required</code> runs next and checks <code>session.get("role")</code>.'});
+      if (sess.role !== 'staff') steps.push({msg: '← 403 Forbidden', cls: 'err', log: '403 Forbidden', lines: ['srr'], narr: `Your role is <b>${esc(sess.role)}</b>, not staff, so <code>abort(403)</code> stops the request. The menu hid this link, but the server check is what actually protects the page.`, apply() { S.url = o.staffUrl; S.view = '403'; }});
+      else steps.push({msg: '← 200 OK', cls: 'ok', log: '200 OK  ' + o.staffTitle.toLowerCase(), lines: ['srok', 'stb'], narr: 'Role is staff, so both decorators pass and the staff page loads.', apply() { S.url = o.staffUrl; S.view = 'staff'; }});
+    }
+  }
+  run(steps);
+}
+
+function doRegister(username, pw) {
+  const o = O();
+  const steps = [{msg: '→ POST /register', cls: 'req', log: 'POST /register   username=' + username + '&password=' + pw.replace(/./g, '*'), lines: ['rg', 'rgv'], narr: 'The form is sent with POST. The view reads and checks the username and the password length.', apply() { S.flash = null; }}];
+  if (!username || pw.length < 8) {
+    steps.push({msg: '← 200 OK (form with error)', cls: 'ok', log: '200 OK  register form with error', lines: ['rgv'], narr: 'Validation failed, so nothing is saved.', apply() { S.flash = ['bad', 'Username required, password at least 8 characters.']; S.view = 'register'; }});
+  } else if (S.users.some(u => u.username === username)) {
+    steps.push({msg: '← 200 OK (form with error)', cls: 'ok', log: '200 OK  register form: username taken', lines: ['rgi'], narr: 'The username column is UNIQUE, so the INSERT fails with IntegrityError and the view shows a friendly message.', apply() { S.flash = ['bad', `User ${username} is already registered.`]; S.view = 'register'; }});
+  } else {
+    let h;
+    steps.push({lines: ['rgh'], narr: '', apply() { h = genHash(pw); this.narr = `<code>generate_password_hash()</code> mixes the password with a random <b>salt</b> and runs a slow hash. The database stores only the result:<br><code style="word-break:break-all">${esc(h.slice(0, 60))}...</code><br>The real password is never stored.`; narr(this.narr); }});
+    steps.push({lines: ['rgi'], narr: 'The INSERT saves the username, the hash, and the default role.', apply() { S.users.push({id: S.users.length + 1, username, hash: h, role: o.role}); }});
+    steps.push({msg: '← 302 Found  Location: /login', cls: 'redir', log: '302 Found  Location: /login', lines: ['rgr'], narr: 'Post, redirect, get again: after saving, redirect to the login page.'});
+    steps.push({msg: '→ GET /login', cls: 'req', log: 'GET /login' + cookieHdr(), lines: ['li'], narr: 'The browser follows the redirect.'});
+    steps.push({msg: '← 200 OK', cls: 'ok', log: '200 OK  login form', lines: ['li'], narr: 'Now log in with the same username and password.', apply() { S.url = '/login'; S.view = 'login'; S.lastUser = username; S.flash = ['ok', 'Account created. Please log in.']; }});
+  }
+  run(steps);
+}
+
+function doLogin(username, pw) {
+  const steps = [{msg: '→ POST /login', cls: 'req', log: 'POST /login   username=' + username + '&password=' + pw.replace(/./g, '*') + cookieHdr(), lines: ['li', 'lis'], narr: 'The view looks up the user by username with a parameterized SELECT.', apply() { S.flash = null; }}];
+  const u = S.users.find(x => x.username === username);
+  const ok = !!u && checkHash(u.hash, pw);
+  steps.push({lines: ['lic'], narr: !u ? 'No user with that name, so the check fails.' : `<code>check_password_hash()</code> takes the salt from the stored hash, hashes the typed password the same way, and compares. Result: <b>${ok ? 'match' : 'no match'}</b>.`});
+  if (!ok) {
+    steps.push({msg: '← 200 OK (form with error)', cls: 'ok', log: '200 OK  login form with error', lines: ['lif'], narr: 'The message does not say whether the username or the password was wrong. That makes guessing accounts harder.', apply() { S.view = 'login'; S.lastUser = username; S.flash = ['bad', 'Incorrect username or password.']; }});
+  } else {
+    let newSess;
+    steps.push({lines: ['lise'], narr: '<code>session.clear()</code> removes anything left over, then the view stores the user id and role in the session.', apply() { newSess = {role: u.role, user_id: u.id}; sessView(esc(JSON.stringify(newSess))); }});
+    steps.push({msg: '← 302 Found  Location: /  + Set-Cookie', cls: 'redir', log: '302 Found  Location: /   Set-Cookie: session=...; HttpOnly; Path=/', lines: ['lir'], narr: 'The response carries a <b>Set-Cookie</b> header. Flask turns the session into a signed cookie: the data, a timestamp, and a signature made with the secret key. Look at the cookie jar.', apply() { S.cookie = makeCookie(newSess); S.tampered = false; }});
+    steps.push({msg: '→ GET /', cls: 'req', log: 'GET /' + cookieHdr(), lines: ['ix'], narr: 'From now on, the browser sends the cookie with every request to this site.'});
+    steps.push(checkStep({ok: true, sess: newSess}));
+    steps.push({msg: '← 200 OK', cls: 'ok', log: '200 OK  home page', lines: ['ix'], narr: `Logged in as <b>${esc(u.username)}</b> (${u.role}). The menu changed because the template reads the session. Now try the protected pages.`, apply() { S.url = '/'; S.view = 'home'; S.flash = ['ok', 'Welcome back, ' + u.username + '!']; }});
+  }
+  run(steps);
+}
+
+function tamper() {
+  const r = currentSess(); if (!S.cookie || !r.ok) return;
+  const forged = Object.assign({}, r.sess, {role: 'staff'});
+  S.cookie = {p: b64u(JSON.stringify(forged)), ts: S.cookie.ts, s: S.cookie.s};
+  S.tampered = true;
+  renderPage();
+  narr('You decoded the data part, changed the role to <b>staff</b>, and encoded it again. The signature is unchanged because you do not know the secret key. Now visit <code>' + O().staffUrl + '</code>.');
+  log('(you edited the cookie in the browser developer tools)');
+}
+
+function reset() {
+  queue = []; const o = O();
+  S.users = [{id: 1, username: o.staffUser, hash: genHash(o.staffPw), role: 'staff'}];
+  Object.assign(S, {cookie: null, url: '/', view: 'home', flash: null, busy: false, logN: 0, tampered: false, lastUser: ''});
+  $('#log').innerHTML = ''; setMsg('waiting', ''); renderCode([]); sessView('{}');
+  $('#staffHint').textContent = `Staff login: ${o.staffUser} / ${o.staffPw}`;
+  narr('Start by registering an account or by visiting a page.');
+  urlButtons(); renderPage();
+}
+document.querySelectorAll('[data-opt]').forEach(b => b.addEventListener('click', () => { if (S.busy) return; S.opt = b.dataset.opt; document.querySelectorAll('[data-opt]').forEach(x => x.setAttribute('aria-pressed', x === b)); reset(); }));
+$('#resetBtn').addEventListener('click', () => { if (!S.busy) reset(); });
+$('#tamperBtn').addEventListener('click', () => { if (!S.busy) tamper(); });
+
+const QUIZ = [
+  {q: 'What does the users table store for each password?', o: ['The password itself', 'A salted hash made by generate_password_hash()', 'The password encrypted with the secret key', 'Nothing, passwords live only in the session'], a: 1, e: 'Only the hash is stored. check_password_hash() can verify a typed password against it, but nobody can read the original back.'},
+  {q: 'Can a user read what is inside a Flask session cookie?', o: ['No, it is encrypted', 'Yes, the data part is only encoded, so never put secrets in the session', 'Only staff users can', 'Only with the database file'], a: 1, e: 'The default Flask session is signed, not encrypted. Store ids and roles, never passwords or private data.'},
+  {q: 'A user edits the cookie to say role "staff". What happens?', o: ['They become staff', 'The signature no longer matches, so Flask ignores the cookie', 'Flask asks for the secret key', 'The database updates their role'], a: 1, e: 'Without the secret key nobody can make a valid signature, which is why SECRET_KEY must stay secret and out of GitHub.'},
+  {q: 'The template hides the staff link from customers. Is the staff page now safe?', o: ['Yes, nobody can find it', 'No, the route also needs a server-side role check such as @staff_required', 'Yes, if the link is also hidden with CSS', 'Only on mobile'], a: 1, e: 'Anyone can type the URL directly. Hiding links improves the interface. Server checks provide security.'},
+  {q: 'A guest visits a page with @login_required. What does the decorator do?', o: ['Shows a 500 error', 'Redirects to the login page before the view runs', 'Runs the view with an empty user', 'Deletes the cookie'], a: 1, e: 'The wrapper checks session.get("user_id") and returns a redirect, so the protected view never runs for guests.'}
+];
+function renderQuiz() {
+  $('#quiz').innerHTML = QUIZ.map((x, i) => `<div class="q"><p>${i + 1}. ${x.q}</p><div class="opts">${x.o.map((o, j) => `<button type="button" class="btn" data-q="${i}" data-o="${j}">${esc(o)}</button>`).join('')}</div><div class="qfb" id="qfb${i}" aria-live="polite"></div></div>`).join('');
+  document.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.q, j = +b.dataset.o, x = QUIZ[i];
+    document.querySelectorAll(`[data-q="${i}"]`).forEach(z => { z.classList.remove('right', 'wrong'); if (+z.dataset.o === x.a) z.classList.add('right'); });
+    if (j !== x.a) b.classList.add('wrong');
+    $('#qfb' + i).textContent = (j === x.a ? 'Correct. ' : 'Not quite. ') + x.e;
+  }));
+}
+renderQuiz();
+reset();
+</script>
+</body>
+</html>
