@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Route Matcher Challenge</title>
+<meta name="description" content="EGN 475 Week 3 challenge: decide which Flask view handles each URL, predict Jinja output, and build links with url_for.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .grid>*{min-width:0}
+  .seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;max-width:100%}
+  .seg button{font:inherit;font-size:14px;font-weight:600;border:0;background:#fff;padding:8px 14px;cursor:pointer;color:var(--ink-2);flex:1 1 auto}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .code{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.6;border-radius:10px;padding:12px 14px;overflow:auto;white-space:pre}
+  .code .k{color:#F9A8D4}.code .s{color:#86EFAC}.code .f{color:#93C5FD}.code .c{color:#94A3B8}
+  .progress{height:8px;background:#EEF1F5;border-radius:99px;overflow:hidden;margin:6px 0 14px}
+  .progress i{display:block;height:100%;width:0;background:var(--au-red);transition:width .3s}
+  .qmeta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+  .part{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--au-red-dark)}
+  .req{display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:18px;font-weight:600;background:#F1F3F6;border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:8px 0;max-width:100%;overflow-wrap:anywhere}
+  .req .m{background:var(--ink);color:#fff;border-radius:6px;padding:2px 8px;font-size:14px}
+  .opts{display:grid;gap:8px;margin-top:12px}
+  @media(min-width:640px){.opts{grid-template-columns:1fr 1fr}}
+  .opt{font:inherit;text-align:left;border:2px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;cursor:pointer;font-family:var(--mono);font-size:14px;color:var(--ink);overflow-wrap:anywhere;white-space:pre-wrap}
+  .opt:hover:not([disabled]){border-color:#9CA3AF}
+  .opt.right{border-color:var(--ok);background:var(--ok-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt[disabled]{cursor:default}
+  .side h3{margin-top:14px}
+  .tally{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+  .tally div{background:#F5F6F8;border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center;font-size:12px;color:var(--muted)}
+  .tally b{display:block;font-size:20px;color:var(--ink)}
+  .review li{margin-bottom:10px}
+  .review code{font-size:13px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 3 · Interactive B</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 3 · Challenge</span>
+    <h1>Route matcher challenge</h1>
+    <p class="lede">Twenty quick questions in three parts: which view function answers a URL, what HTML a Jinja snippet produces, and what <code>url_for()</code> builds. These are exactly the details Copilot gets wrong most often, so learning to predict them makes you a much better reviewer of its code.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol>
+      <li>Choose the app you are building (the questions use its routes and data).</li>
+      <li>Read the route table on the right. It stays visible for every question.</li>
+      <li>Pick one answer per question. You get feedback and an explanation right away.</li>
+      <li>Each question is worth 5 points. At the end you see your score and a review of anything you missed.</li>
+      <li>Retake it as often as you like. Aim for 90 or more before you start Assignment 3.1.</li>
+    </ol>
+  </details>
+
+  <div style="margin:0 0 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <div class="seg" role="group" aria-label="Choose your app">
+      <button type="button" data-app="cafe" aria-pressed="true">Option A: Café Calle Ocho</button>
+      <button type="button" data-app="salon" aria-pressed="false">Option B: Bella Vista Salon</button>
+    </div>
+    <span class="pill" id="scorepill">Score 0 / 100</span>
+  </div>
+
+  <div class="grid two">
+    <section class="card" id="qcard" aria-live="polite">
+      <div class="qmeta"><span class="part" id="part">Part 1 of 3 · Which view answers?</span><span id="qnum">Question 1 of 20</span></div>
+      <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+      <h2 id="qtext">Question</h2>
+      <div id="qbody"></div>
+      <div class="opts" id="opts"></div>
+      <div id="fb"></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" id="nextq" type="button" hidden>Next question</button>
+      </div>
+    </section>
+
+    <section class="card" id="done" hidden aria-live="polite">
+      <span class="eyebrow">Results</span>
+      <h2 style="margin-top:8px">Your score</h2>
+      <div class="score"><span class="big" id="final">0 / 100</span><span id="verdict"></span></div>
+      <div class="tally" id="tally"></div>
+      <h3>Review what you missed</h3>
+      <ol class="review" id="review"></ol>
+      <button class="btn primary" id="restart" type="button">Try again</button>
+    </section>
+
+    <aside class="card side">
+      <h2>Your app's routes</h2>
+      <div class="code" id="routes"></div>
+      <h3>Rules to remember</h3>
+      <ul style="padding-left:18px;margin:0;font-size:14px;color:var(--ink-2)">
+        <li><code>&lt;int:x&gt;</code> matches digits only. A plain <code>&lt;x&gt;</code> matches any text without a slash.</li>
+        <li>When both could match, the more specific <code>int</code> rule wins.</li>
+        <li>A rule ending in <code>/</code> redirects the no-slash version (308). A rule without the slash gives 404 if you add one.</li>
+        <li>If the path matches but the method is not allowed, Flask answers 405.</li>
+        <li><code>url_for()</code> takes the function name, not the URL. Missing route values cause a <code>BuildError</code>; extra values become a query string.</li>
+        <li>Jinja prints a missing variable as nothing, but reading an attribute from it raises an error.</li>
+      </ul>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const V = {
+  cafe: {shop:'Café Calle Ocho', list:'menu', itemFn:'menu_item', id:'item_id', catFn:'menu_category', cat:'category', catVal:'drinks', rec:'orders', recId:'order_id',
+         items:[{name:'Café con leche', price:3.5},{name:'Croqueta', price:1.25}], emptyMsg:'No orders yet', who:'customer'},
+  salon:{shop:'Bella Vista Salon', list:'services', itemFn:'service_detail', id:'service_id', catFn:'services_by_stylist', cat:'stylist', catVal:'maria', rec:'appointments', recId:'appointment_id',
+         items:[{name:'Haircut', price:45},{name:'Blowout', price:35}], emptyMsg:'No appointments yet', who:'client'}
+};
+let appKey = 'cafe';
+function rules(v){
+  return [
+    {rule:'/', fn:'home', args:''},
+    {rule:`/${v.list}`, fn:v.list, args:''},
+    {rule:`/${v.list}/<int:${v.id}>`, fn:v.itemFn, args:v.id},
+    {rule:`/${v.list}/<${v.cat}>`, fn:v.catFn, args:v.cat},
+    {rule:`/${v.rec}/`, fn:v.rec, args:''},
+    {rule:`/${v.rec}/<int:${v.recId}>/status`, fn:'update_status', args:v.recId, methods:['POST']},
+    {rule:'/about', fn:'about', args:''}
+  ];
+}
+function routesHTML(v){
+  return rules(v).map(r => `<span class="f">@app.route</span>(<span class="s">"${esc(r.rule)}"</span>${r.methods ? `,\n           methods=[<span class="s">"POST"</span>]` : ''})\n<span class="k">def</span> ${r.fn}(${r.args}): ...`).join('\n\n');
+}
+const fmt2 = n => n.toFixed(2);
+function questions(v){
+  const Q = [];
+  const NF = '404 Not Found', NA = '405 Method Not Allowed';
+  const fn = f => f + '()';
+  // ---- Part 1: routing
+  Q.push({part:1, kind:'route', method:'GET', path:`/${v.list}/3`, opts:[fn(v.itemFn), fn(v.catFn), fn(v.list), NF], ans:0,
+    why:`Both <code>/${v.list}/&lt;int:${v.id}&gt;</code> and <code>/${v.list}/&lt;${v.cat}&gt;</code> could fit "3", but the int converter is more specific, so <code>${v.itemFn}(${v.id}=3)</code> runs and receives the integer 3.`});
+  Q.push({part:1, kind:'route', method:'GET', path:`/${v.list}/${v.catVal}`, opts:[fn(v.itemFn), fn(v.catFn), fn(v.list), NF], ans:1,
+    why:`"${v.catVal}" is not a number, so the int rule fails. The plain <code>&lt;${v.cat}&gt;</code> rule accepts any text, so <code>${v.catFn}(${v.cat}="${v.catVal}")</code> runs.`});
+  Q.push({part:1, kind:'route', method:'GET', path:`/${v.rec}`, opts:[fn(v.rec), `308 redirect to /${v.rec}/`, NF, NA], ans:1,
+    why:`The rule is written <code>/${v.rec}/</code> with a trailing slash. Visiting it without the slash makes Flask redirect (308) to the version with the slash. The browser follows the redirect automatically.`});
+  Q.push({part:1, kind:'route', method:'GET', path:'/about/', opts:[fn('about'), '308 redirect to /about', NF, fn('home')], ans:2,
+    why:'The rule <code>/about</code> has no trailing slash, so a path with an extra slash matches nothing: 404. Flask only redirects in the other direction.'});
+  Q.push({part:1, kind:'route', method:'GET', path:`/${v.rec}/5/status`, opts:['update_status()', NF, NA, fn(v.rec)], ans:2,
+    why:'The path matches the status rule, but that rule only allows POST. A matching path with the wrong method gives 405 Method Not Allowed, not 404.'});
+  Q.push({part:1, kind:'route', method:'POST', path:`/${v.rec}/5/status`, opts:['update_status()', NF, NA, fn(v.rec)], ans:0,
+    why:`POST is allowed on this rule, so <code>update_status(${v.recId}=5)</code> runs. In Week 5 your status buttons will send exactly this kind of request from a form.`});
+  Q.push({part:1, kind:'route', method:'GET', path:`/${v.list}/3/`, opts:[fn(v.itemFn), `308 redirect to /${v.list}/3`, NF, fn(v.catFn)], ans:2,
+    why:`<code>/${v.list}/&lt;int:${v.id}&gt;</code> has no trailing slash, and <code>&lt;${v.cat}&gt;</code> cannot contain a slash, so nothing matches: 404.`});
+  Q.push({part:1, kind:'route', method:'GET', path:`/${v.list}/-2`, opts:[fn(v.itemFn), fn(v.catFn), NF, NA], ans:1,
+    why:`Surprise: <code>int</code> does not accept a minus sign, so the int rule fails, but "-2" is still valid text for <code>&lt;${v.cat}&gt;</code>. <code>${v.catFn}(${v.cat}="-2")</code> runs. Always validate values inside your view.`});
+  Q.push({part:1, kind:'route', method:'GET', path:`/${v.list.charAt(0).toUpperCase() + v.list.slice(1)}`, opts:[fn(v.list), NF, `308 redirect to /${v.list}`, fn(v.catFn)], ans:1,
+    why:'URL paths are case sensitive in Flask. A capital letter means no rule matches, so the answer is 404.'});
+  // ---- Part 2: Jinja
+  const it = v.items;
+  const liOut = '<ul>' + it.map(x => `<li>${x.name}: $${fmt2(x.price)}</li>`).join('') + '</ul>';
+  const liWrong1 = '<ul>' + it.map(x => `<li>${x.name}: $${x.price}</li>`).join('') + '</ul>';
+  const liWrong2 = '<ul><li>{{ i.name }}: ${{ "%.2f"|format(i.price) }}</li></ul>';
+  Q.push({part:2, kind:'jinja', tpl:'<ul>{% for i in items %}<li>{{ i.name }}: ${{ "%.2f"|format(i.price) }}</li>{% endfor %}</ul>', ctx:{items:it},
+    text:`The view passes <code>items=${esc(JSON.stringify(it))}</code>. What HTML does this produce?`, opts:[liOut, liWrong1, liWrong2, '500 error (UndefinedError)'], ans:0,
+    why:'The loop runs once per dictionary, Jinja reads <code>i.name</code> from each one, and <code>"%.2f"|format(...)</code> always shows two decimals.'});
+  Q.push({part:2, kind:'jinja', tpl:`{% if ${v.rec} %}<p>{{ ${v.rec}|length }} ${v.rec}</p>{% else %}<p>${v.emptyMsg}</p>{% endif %}`, ctx:{[v.rec]:[]},
+    text:`The view passes <code>${v.rec}=[]</code> (an empty list). What HTML does this produce?`, opts:[`<p>0 ${v.rec}</p>`, `<p>${v.emptyMsg}</p>`, '', '500 error (UndefinedError)'], ans:1,
+    why:'An empty list counts as false in an <code>{% if %}</code>, so the <code>{% else %}</code> branch runs.'});
+  Q.push({part:2, kind:'jinja', tpl:`<p>Hello {{ ${v.who} }}</p>`, ctx:{},
+    text:`The view calls <code>render_template("page.html")</code> and forgets to pass <code>${v.who}</code>. What HTML does this produce?`, opts:[`<p>Hello None</p>`, `<p>Hello ${v.who}</p>`, '<p>Hello </p>', '500 error (UndefinedError)'], ans:2,
+    why:'Printing an undefined variable gives an empty string. No error appears, which is why forgotten variables are easy to miss. Check every page in the browser.'});
+  Q.push({part:2, kind:'jinja', tpl:`<p>{{ ${v.list === 'menu' ? 'item' : 'service'}.name }}</p>`, ctx:{},
+    text:`The view forgets to pass <code>${v.list === 'menu' ? 'item' : 'service'}</code>, but the template reads an attribute from it. What happens?`, opts:['<p></p>', '<p>None</p>', '500 error (UndefinedError)', '404 Not Found'], ans:2,
+    why:`Reading <code>.name</code> from something that does not exist raises <code>jinja2.exceptions.UndefinedError</code>, and the user sees 500 Internal Server Error. With <code>--debug</code> on, the traceback names the missing variable.`});
+  Q.push({part:2, kind:'jinja', tpl:'{{ shop|upper }}', ctx:{shop:v.shop},
+    text:`The view passes <code>shop="${v.shop}"</code>. What does <code>{{ shop|upper }}</code> produce?`, opts:[v.shop.toUpperCase(), v.shop, 'SHOP', '500 error (UndefinedError)'], ans:0,
+    why:'The <code>upper</code> filter converts the text to capital letters. Filters are applied with the pipe symbol <code>|</code>.'});
+  Q.push({part:2, kind:'jinja', tpl:'<p>{{ note }}</p>', ctx:{note:'<b>Hi</b>'},
+    text:'A user typed <code>&lt;b&gt;Hi&lt;/b&gt;</code> into a notes field. What is in the HTML source of <code>&lt;p&gt;{{ note }}&lt;/p&gt;</code>?', opts:['<p><b>Hi</b></p>', '<p>&lt;b&gt;Hi&lt;/b&gt;</p>', '<p>Hi</p>', '500 error (UndefinedError)'], ans:1,
+    why:'Flask turns on autoescaping for .html templates, so the angle brackets become <code>&amp;lt;</code> and <code>&amp;gt;</code>. The browser shows the text literally instead of running it as HTML. This protects your app from users who type code into forms.'});
+  // ---- Part 3: url_for
+  Q.push({part:3, kind:'urlfor', endpoint:v.itemFn, kw:{[v.id]:3}, text:`What does <code>url_for("${v.itemFn}", ${v.id}=3)</code> return?`,
+    opts:[`/${v.list}/3`, `/${v.itemFn}/3`, `/${v.list}?${v.id}=3`, 'BuildError'], ans:0,
+    why:'<code>url_for()</code> looks up the function name, finds its rule, and fills <code>3</code> into the converter.'});
+  Q.push({part:3, kind:'urlfor', endpoint:v.itemFn, kw:{id:3}, text:`Copilot wrote <code>url_for("${v.itemFn}", id=3)</code>. What happens?`,
+    opts:[`/${v.list}/3`, `/${v.list}?id=3`, 'BuildError', '404 Not Found'], ans:2,
+    why:`The rule needs a value called <code>${v.id}</code>. Without it Flask cannot build the URL and raises <code>BuildError</code>. The fix is to use the exact name from the route: <code>${v.id}=3</code>.`});
+  Q.push({part:3, kind:'urlfor', endpoint:v.list, kw:{[v.cat]:v.catVal}, text:`What does <code>url_for("${v.list}", ${v.cat}="${v.catVal}")</code> return?`,
+    opts:[`/${v.list}/${v.catVal}`, `/${v.list}?${v.cat}=${v.catVal}`, 'BuildError', `/${v.list}`], ans:1,
+    why:`The <code>${v.list}</code> rule has no variables, so extra keyword values are added as a query string. Your view would read it with <code>request.args.get("${v.cat}")</code>.`});
+  Q.push({part:3, kind:'urlfor', endpoint:v.rec, kw:{}, text:`What does <code>url_for("${v.rec}")</code> return?`,
+    opts:[`/${v.rec}`, `/${v.rec}/`, `/${v.rec}.html`, 'BuildError'], ans:1,
+    why:`The rule was written as <code>/${v.rec}/</code>, so <code>url_for()</code> builds it exactly that way, trailing slash included. Links built with <code>url_for()</code> never trigger the 308 redirect.`});
+  Q.push({part:3, kind:'urlfor', endpoint:'static', kw:{filename:'style.css'}, text:'What does <code>url_for("static", filename="style.css")</code> return?',
+    opts:['/static/style.css', '/style.css', 'static/style.css', 'BuildError'], ans:0,
+    why:'<code>static</code> is a built-in endpoint for the <code>static/</code> folder. Use it in base.html to link your CSS, images, and JavaScript.'});
+  return Q.map((q, i) => Object.assign(q, {n:i}));
+}
+// Shuffle options per question but remember the answer (deterministic per attempt)
+let seed = 1;
+function rnd(){ seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+let Q = [], qi = 0, score = 0, results = [];
+const $ = id => document.getElementById(id);
+const partName = {1:'Which view answers?', 2:'Predict the Jinja output', 3:'Build the link with url_for()'};
+function start(){
+  const v = V[appKey];
+  $('routes').innerHTML = routesHTML(v);
+  seed = Math.floor(Math.random() * 1000) + 1;
+  Q = questions(v).map(q => {
+    const order = q.opts.map((o, i) => i).sort(() => rnd() - 0.5);
+    return Object.assign({}, q, {opts: order.map(i => q.opts[i]), ans: order.indexOf(q.ans)});
+  });
+  qi = 0; score = 0; results = [];
+  $('done').hidden = true; $('qcard').hidden = false;
+  render();
+}
+function render(){
+  const q = Q[qi], v = V[appKey];
+  $('part').textContent = `Part ${q.part} of 3 · ${partName[q.part]}`;
+  $('qnum').textContent = `Question ${qi + 1} of ${Q.length}`;
+  $('bar').style.width = (qi / Q.length * 100) + '%';
+  $('scorepill').textContent = `Score ${score} / 100`;
+  if (q.kind === 'route'){
+    $('qtext').textContent = 'Which view function handles this request, or what does Flask answer?';
+    $('qbody').innerHTML = `<div class="req"><span class="m">${q.method}</span>${esc(q.path)}</div>`;
+  } else if (q.kind === 'jinja'){
+    $('qtext').innerHTML = q.text;
+    $('qbody').innerHTML = `<div class="code">${esc(q.tpl)}</div>`;
+  } else {
+    $('qtext').innerHTML = q.text;
+    $('qbody').innerHTML = '';
+  }
+  $('opts').innerHTML = q.opts.map((o, i) => `<button type="button" class="opt" data-i="${i}">${o === '' ? '(empty string: nothing at all)' : esc(o)}</button>`).join('');
+  $('fb').innerHTML = ''; $('nextq').hidden = true;
+  if (hasGSAP) gsap.from('#qcard h2, #qbody, .opt', {opacity:0, y:8, duration:0.3, stagger:0.04});
+}
+function answer(i){
+  const q = Q[qi];
+  const ok = i === q.ans;
+  document.querySelectorAll('.opt').forEach((b, j) => { b.disabled = true; if (j === q.ans) b.classList.add('right'); else if (j === i) b.classList.add('wrong'); });
+  if (ok) score += 5;
+  results.push({q, ok, picked:q.opts[i]});
+  $('fb').innerHTML = `<div class="feedback ${ok ? 'ok' : 'bad'}"><b>${ok ? 'Correct.' : 'Not quite.'}</b> ${q.why}</div>`;
+  $('scorepill').textContent = `Score ${score} / 100`;
+  $('nextq').hidden = false; $('nextq').textContent = qi === Q.length - 1 ? 'See my results' : 'Next question';
+  $('nextq').focus();
+}
+function finish(){
+  $('qcard').hidden = true; $('done').hidden = false;
+  $('final').textContent = `${score} / 100`;
+  $('verdict').textContent = score >= 90 ? 'Excellent. You are ready for Assignment 3.1.' : score >= 70 ? 'Good. Review the missed questions, then try again.' : 'Keep practicing. Reread the rules on the right and retake it.';
+  const parts = [1,2,3].map(p => { const r = results.filter(x => x.q.part === p); return `<div>Part ${p}<b>${r.filter(x => x.ok).length}/${r.length}</b></div>`; });
+  $('tally').innerHTML = parts.join('');
+  const miss = results.filter(r => !r.ok);
+  $('review').innerHTML = miss.length ? miss.map(r => `<li><b>${r.q.kind === 'route' ? esc(r.q.method + ' ' + r.q.path) : r.q.text}</b><br>You chose <code>${esc(r.picked || '(empty)')}</code>. Correct: <code>${esc(r.q.opts[r.q.ans] || '(empty)')}</code>.<br><span style="color:var(--ink-2)">${r.q.why}</span></li>`).join('') : '<li>Nothing to review. Perfect score.</li>';
+  $('scorepill').textContent = `Score ${score} / 100`;
+  if (hasGSAP) gsap.from('#final', {scale:0.6, opacity:0, duration:0.5, ease:'back.out(2)'});
+}
+$('opts').addEventListener('click', e => { const b = e.target.closest('.opt'); if (b && !b.disabled) answer(+b.dataset.i); });
+$('nextq').addEventListener('click', () => { if (qi < Q.length - 1){ qi++; render(); } else finish(); });
+$('restart').addEventListener('click', start);
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  appKey = b.dataset.app;
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  start();
+}));
+start();
+window.__rm = {questions: k => questions(V[k]), rules: k => rules(V[k])};
+</script>
+
+</body>
+</html>

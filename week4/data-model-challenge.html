@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Model Challenge</title>
+<meta name="description" content="EGN 475 Week 4 challenge: design the SQLite tables, columns, keys and data types for the café or salon prototype.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .grid>*{min-width:0}
+  .seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;max-width:100%}
+  .seg button{font:inherit;font-size:14px;font-weight:600;border:0;background:#fff;padding:8px 14px;cursor:pointer;color:var(--ink-2);flex:1 1 auto}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .stepper{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .stepper span{font-size:13px;font-weight:600;border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--muted);background:#fff}
+  .stepper span.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .stepper span.done{background:var(--ok-soft);color:#14532D;border-color:#BBE5C8}
+  .cards{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+  .tcard{font:inherit;text-align:left;border:2px solid var(--line);background:#fff;border-radius:12px;padding:12px;cursor:pointer;display:grid;gap:4px}
+  .tcard b{font-family:var(--mono);font-size:15px}
+  .tcard small{color:var(--muted);font-size:13px;line-height:1.4}
+  .tcard[aria-pressed="true"]{border-color:var(--net-blue);background:#EEF4FF}
+  .tcard.right{border-color:var(--ok)!important;background:var(--ok-soft)!important}
+  .tcard.wrong{border-color:var(--bad)!important;background:var(--bad-soft)!important}
+  .tcard .why{display:none;font-size:13px;color:var(--ink-2)}
+  .checked .tcard .why{display:block}
+  .colgrid{display:grid;gap:8px}
+  @media(min-width:640px){.colgrid{grid-template-columns:1fr 1fr}}
+  .colrow{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
+  .colrow code{font-size:14px;font-weight:600}
+  .colrow small{display:block;color:var(--muted);font-size:12px}
+  .colrow.right{border-color:var(--ok);background:var(--ok-soft)}
+  .colrow.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .colrow select{max-width:150px}
+  .mcq{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#fff}
+  .mcq p{margin:0 0 8px;font-weight:600}
+  .mcq label{display:flex;gap:8px;align-items:flex-start;padding:5px 6px;border-radius:8px;font-family:var(--mono);font-size:13px;cursor:pointer}
+  .mcq label.right{background:var(--ok-soft)}
+  .mcq label.wrong{background:var(--bad-soft)}
+  .mcq .why{font-size:13px;color:var(--ink-2);margin-top:6px}
+  .schema{border-radius:10px;overflow:hidden;border:1px solid #1F2937}
+  .schema label{display:flex;gap:10px;align-items:center;background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;padding:6px 12px;cursor:pointer;border-bottom:1px solid #1E293B;overflow-wrap:anywhere}
+  .schema label.fixed{cursor:default;color:#94A3B8}
+  .schema label.right{background:#14532D}
+  .schema label.wrong{background:#7F1D1D}
+  .schema .why{display:block;font-family:var(--sans);font-size:12px;color:#E2E8F0;margin-top:2px}
+  .sumbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .sumbar div{flex:1 1 120px;background:#F5F6F8;border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center;font-size:12px;color:var(--muted)}
+  .sumbar b{display:block;font-size:20px;color:var(--ink)}
+  .model{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.55;border-radius:10px;padding:12px 14px;overflow:auto;white-space:pre}
+  .tcard:disabled{color:var(--ink);opacity:1;cursor:default}
+  .tcard .verdict{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 4 · Interactive B</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 4 · Challenge</span>
+    <h1>Data model challenge</h1>
+    <p class="lede">Before Copilot writes a single <code>CREATE TABLE</code>, you decide what your prototype needs to remember. Pick the tables, place each column, choose keys and data types, and then find the mistakes in a schema an assistant suggested. You finish with a model <code>schema.sql</code> to compare against your own.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol>
+      <li>Choose your option. Switching restarts the challenge with that app's data.</li>
+      <li>Work through the four steps in order. Each step has a "Check this step" button that scores it and explains every answer.</li>
+      <li>Points: tables 20, columns 30, keys and types 30, schema review 20.</li>
+      <li>At the end, compare the model schema with what you plan to write for Assignment 4.1.</li>
+    </ol>
+  </details>
+
+  <div style="margin:0 0 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <div class="seg" role="group" aria-label="Choose your app">
+      <button type="button" data-app="cafe" aria-pressed="true">Option A: Café Calle Ocho</button>
+      <button type="button" data-app="salon" aria-pressed="false">Option B: Bella Vista Salon</button>
+    </div>
+    <span class="pill" id="pill">Score 0 / 100</span>
+  </div>
+
+  <div class="grid two">
+    <section class="card" aria-live="polite">
+      <div class="stepper" id="stepper"></div>
+      <h2 id="stitle"></h2>
+      <p id="sintro" style="color:var(--ink-2);margin-top:0"></p>
+      <div id="sbody"></div>
+      <div id="sfb"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        <button class="btn primary" id="check" type="button">Check this step</button>
+        <button class="btn" id="nextstep" type="button" hidden>Next step</button>
+      </div>
+    </section>
+    <aside class="card">
+      <h2>The client's needs</h2>
+      <div id="brief"></div>
+      <h3 style="margin-top:16px">Vocabulary</h3>
+      <ul style="padding-left:18px;margin:0;font-size:14px;color:var(--ink-2)">
+        <li>A table stores one kind of thing; each row is one of them.</li>
+        <li>A primary key (<code>id</code>) gives every row a unique number.</li>
+        <li>A foreign key stores another table's <code>id</code> to link rows together.</li>
+        <li>Store money as whole cents in an <code>INTEGER</code>, never as a decimal number.</li>
+        <li>SQLite has no true/false type: use <code>INTEGER</code> 1 or 0.</li>
+      </ul>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $ = id => document.getElementById(id);
+const DATA = {
+  cafe: {
+    brief: '<p><b>Café Calle Ocho</b> (Little Havana) wants customers to order from the menu online and the kitchen to see a live board of orders.</p><ul style="padding-left:18px"><li>Customers and kitchen staff log in. Staff can see more screens.</li><li>The menu has items with a category and a price. Some items run out for the day.</li><li>One order can include several menu items, each with a quantity.</li><li>An order moves through received, preparing, ready, picked up.</li></ul>',
+    tables: [
+      {name:'users', need:true, desc:'People who log in', why:'Customers and staff both log in. One table with a role column handles both.'},
+      {name:'menu_items', need:true, desc:'Things the café sells', why:'Each dish or drink is one row with its own price and category.'},
+      {name:'orders', need:true, desc:'One row per order placed', why:'Holds who ordered, when, and the order\'s status.'},
+      {name:'order_items', need:true, desc:'Which items are in which order', why:'One order has many items. This "line items" table links orders to menu items with a quantity.'},
+      {name:'staff', need:false, desc:'Kitchen employees', why:'Not needed: staff are users with role = \'staff\'. Two tables of people would duplicate logins.'},
+      {name:'prices', need:false, desc:'Price list', why:'Not needed: price is a column of menu_items, not a separate thing.'},
+      {name:'daily_totals', need:false, desc:'Money earned per day', why:'Not needed: calculate it with a SELECT query when you need it. Stored totals go out of date.'},
+      {name:'kitchen_board', need:false, desc:'The board staff look at', why:'Not needed: that is a screen built from the orders table, not data of its own.'}
+    ],
+    tableNames: ['users','menu_items','orders','order_items'],
+    columns: [
+      ['username','users','login name'],['password_hash','users','scrambled password'],['role','users','customer or staff'],
+      ['name','menu_items','e.g. Cortadito'],['category','menu_items','Drinks, Food, Bakery'],['price_cents','menu_items','350 means $3.50'],['available','menu_items','1 or 0'],
+      ['customer_name','orders','name for pickup'],['status','orders','received, preparing...'],['created_at','orders','when it was placed'],
+      ['quantity','order_items','how many'],['menu_item_id','order_items','which item']
+    ],
+    mcq: [
+      {q:'Which column should be the primary key of orders?', o:['id INTEGER PRIMARY KEY AUTOINCREMENT','customer_name TEXT PRIMARY KEY','created_at TIMESTAMP PRIMARY KEY','No key is needed'], a:0, why:'A number that SQLite assigns automatically is always unique. Names repeat (two customers named Maria) and two orders can arrive in the same second.'},
+      {q:'What is order_items.order_id?', o:['A foreign key that stores orders.id','The primary key of order_items','A copy of the customer\'s name','Not needed, use the item name'], a:0, why:'It links each line item to its order: <code>FOREIGN KEY (order_id) REFERENCES orders (id)</code>.'},
+      {q:'How should menu prices be stored?', o:['price_cents INTEGER NOT NULL','price REAL NOT NULL','price TEXT, for example "$3.50"','price BLOB'], a:0, why:'Decimal numbers are stored in binary and drift (0.1 + 0.2 is not exactly 0.3). Whole cents are exact. Divide by 100 only when displaying.'},
+      {q:'How should "available" be stored in SQLite?', o:['available INTEGER NOT NULL DEFAULT 1','available TEXT, "yes" or "no"','available REAL','A separate available_items table'], a:0, why:'SQLite has no real boolean type. 1 and 0 are the convention, and <code>WHERE available = 1</code> is simple to write.'},
+      {q:'What is the best definition for created_at?', o:['created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP','created_at TEXT, typed by the customer','created_at INTEGER, the order number','Leave it out'], a:0, why:'SQLite fills in the current UTC date and time by itself, in a format that sorts correctly. Never ask users to type it.'},
+      {q:'How should the order status be stored?', o:["status TEXT NOT NULL DEFAULT 'received'",'Four columns: received, preparing, ready, picked_up','A separate table for each status','status REAL'], a:0, why:'One text column with a default. Moving to the next status is a single <code>UPDATE orders SET status = ? WHERE id = ?</code>.'}
+    ],
+    flawed: [
+      {t:'CREATE TABLE users (', fixed:true},
+      {t:'  username TEXT NOT NULL,', bad:true, why:'No id primary key, and usernames should be UNIQUE. Add id INTEGER PRIMARY KEY AUTOINCREMENT and username TEXT UNIQUE NOT NULL.'},
+      {t:'  password TEXT NOT NULL,', bad:true, why:'Never store plain passwords. Store password_hash made with werkzeug.security (Week 6).'},
+      {t:"  role TEXT NOT NULL DEFAULT 'customer'", bad:false, why:'Fine: one users table with a role.'},
+      {t:');', fixed:true},
+      {t:'CREATE TABLE menu_items (', fixed:true},
+      {t:'  id INTEGER PRIMARY KEY AUTOINCREMENT,', bad:false, why:'Fine: a proper primary key.'},
+      {t:'  price REAL NOT NULL,', bad:true, why:'Money as REAL drifts with rounding. Use price_cents INTEGER.'},
+      {t:'  available INTEGER NOT NULL DEFAULT 1', bad:false, why:'Fine: 1 or 0.'},
+      {t:');', fixed:true},
+      {t:'CREATE TABLE orders (', fixed:true},
+      {t:'  id INTEGER PRIMARY KEY AUTOINCREMENT,', bad:false, why:'Fine.'},
+      {t:'  item1 TEXT, item2 TEXT, item3 TEXT,', bad:true, why:'Repeating columns break as soon as someone orders four things. Use the order_items table, one row per item.'},
+      {t:"  status TEXT NOT NULL DEFAULT 'received'", bad:false, why:'Fine.'},
+      {t:');', fixed:true}
+    ],
+    model: `DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS menu_items;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'customer'
+);
+
+CREATE TABLE menu_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  price_cents INTEGER NOT NULL,
+  available INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  customer_name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'received',
+  notes TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id)
+);
+
+CREATE TABLE order_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  order_id INTEGER NOT NULL,
+  menu_item_id INTEGER NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  FOREIGN KEY (order_id) REFERENCES orders (id),
+  FOREIGN KEY (menu_item_id) REFERENCES menu_items (id)
+);`
+  },
+  salon: {
+    brief: '<p><b>Bella Vista Salon</b> (Coral Gables) wants clients to book appointments online and staff to see the day\'s calendar.</p><ul style="padding-left:18px"><li>Clients and staff log in. Staff can see more screens.</li><li>The salon offers services, each with a length in minutes and a price. Some services are paused.</li><li>An appointment is for one service on a date and time.</li><li>An appointment moves through requested, confirmed, completed, or canceled.</li></ul>',
+    tables: [
+      {name:'users', need:true, desc:'People who log in', why:'Clients and staff both log in. One table with a role column handles both.'},
+      {name:'services', need:true, desc:'What the salon offers', why:'Each service is one row with its length and price.'},
+      {name:'appointments', need:true, desc:'One row per booking', why:'Holds who booked, which service, the date and time, and the status.'},
+      {name:'staff', need:false, desc:'Salon employees', why:'Not needed: staff are users with role = \'staff\'. Two tables of people would duplicate logins.'},
+      {name:'prices', need:false, desc:'Price list', why:'Not needed: price is a column of services.'},
+      {name:'daily_revenue', need:false, desc:'Money earned per day', why:'Not needed: calculate it with a SELECT query. Stored totals go out of date.'},
+      {name:'calendar', need:false, desc:'The staff calendar view', why:'Not needed: that is a screen built from the appointments table.'},
+      {name:'confirmed_appointments', need:false, desc:'Bookings that were confirmed', why:'Not needed: confirmed is a value of the status column, not a separate table.'}
+    ],
+    tableNames: ['users','services','appointments'],
+    columns: [
+      ['username','users','login name'],['password_hash','users','scrambled password'],['role','users','client or staff'],
+      ['name','services','e.g. Blowout'],['duration_minutes','services','45'],['price_cents','services','4500 means $45.00'],['active','services','1 or 0'],
+      ['client_name','appointments','who is coming'],['date','appointments','2026-11-05'],['time','appointments','14:30'],['status','appointments','requested, confirmed...'],['service_id','appointments','which service']
+    ],
+    mcq: [
+      {q:'Which column should be the primary key of appointments?', o:['id INTEGER PRIMARY KEY AUTOINCREMENT','client_name TEXT PRIMARY KEY','date TEXT PRIMARY KEY','No key is needed'], a:0, why:'A number that SQLite assigns automatically is always unique. Clients book many times, and many appointments share a date.'},
+      {q:'What is appointments.service_id?', o:['A foreign key that stores services.id','The primary key of appointments','A copy of the service name','Not needed, use the price'], a:0, why:'It links each appointment to one service: <code>FOREIGN KEY (service_id) REFERENCES services (id)</code>. Renaming a service then updates every booking automatically.'},
+      {q:'How should service prices be stored?', o:['price_cents INTEGER NOT NULL','price REAL NOT NULL','price TEXT, for example "$45"','price BLOB'], a:0, why:'Decimal numbers drift in binary. Whole cents are exact. Divide by 100 only when displaying.'},
+      {q:'How should the appointment date and time be stored?', o:["date TEXT 'YYYY-MM-DD' and time TEXT 'HH:MM'","date TEXT like 'Nov 5'",'date REAL','One column with the day name, like "Tuesday"'], a:0, why:'ISO format text sorts correctly as text, so <code>ORDER BY date, time</code> just works, and HTML date and time inputs send exactly this format.'},
+      {q:'How should "active" be stored in SQLite?', o:['active INTEGER NOT NULL DEFAULT 1','active TEXT, "yes" or "no"','active REAL','A separate active_services table'], a:0, why:'SQLite has no real boolean type. 1 and 0 are the convention.'},
+      {q:'How should the appointment status be stored?', o:["status TEXT NOT NULL DEFAULT 'requested'",'Four columns: requested, confirmed, completed, canceled','A separate table for each status','status REAL'], a:0, why:'One text column with a default. Confirming is a single <code>UPDATE appointments SET status = ? WHERE id = ?</code>.'}
+    ],
+    flawed: [
+      {t:'CREATE TABLE users (', fixed:true},
+      {t:'  username TEXT NOT NULL,', bad:true, why:'No id primary key, and usernames should be UNIQUE.'},
+      {t:'  password TEXT NOT NULL,', bad:true, why:'Never store plain passwords. Store password_hash (Week 6).'},
+      {t:"  role TEXT NOT NULL DEFAULT 'client'", bad:false, why:'Fine: one users table with a role.'},
+      {t:');', fixed:true},
+      {t:'CREATE TABLE services (', fixed:true},
+      {t:'  id INTEGER PRIMARY KEY AUTOINCREMENT,', bad:false, why:'Fine.'},
+      {t:'  price REAL NOT NULL,', bad:true, why:'Money as REAL drifts with rounding. Use price_cents INTEGER.'},
+      {t:'  duration_minutes INTEGER NOT NULL', bad:false, why:'Fine: a whole number of minutes.'},
+      {t:');', fixed:true},
+      {t:'CREATE TABLE appointments (', fixed:true},
+      {t:'  id INTEGER PRIMARY KEY AUTOINCREMENT,', bad:false, why:'Fine.'},
+      {t:'  service_name TEXT NOT NULL,', bad:true, why:'Copying the name duplicates data and breaks when a service is renamed. Store service_id INTEGER with a foreign key.'},
+      {t:"  status TEXT NOT NULL DEFAULT 'requested'", bad:false, why:'Fine.'},
+      {t:');', fixed:true}
+    ],
+    model: `DROP TABLE IF EXISTS appointments;
+DROP TABLE IF EXISTS services;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'client'
+);
+
+CREATE TABLE services (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  duration_minutes INTEGER NOT NULL,
+  price_cents INTEGER NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE appointments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  service_id INTEGER NOT NULL,
+  client_name TEXT NOT NULL,
+  date TEXT NOT NULL,
+  time TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'requested',
+  notes TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id),
+  FOREIGN KEY (service_id) REFERENCES services (id)
+);`
+  }
+};
+const STEPS = [
+  {title:'Step 1: choose the tables', pts:20, intro:'Click every card that should become a table in your database. Leave the others unselected. Hint: things you can calculate or that are just screens are not tables.'},
+  {title:'Step 2: place every column', pts:30, intro:'Choose the table each column belongs to. A column belongs where it describes one row of that table.'},
+  {title:'Step 3: keys and data types', pts:30, intro:'Pick the best definition for each question. These choices decide whether your Week 5 and Week 6 features are easy or painful.'},
+  {title:'Step 4: review an AI-suggested schema', pts:20, intro:'Copilot suggested this schema. Click every line that has a real problem. Leave the correct lines unselected.'},
+  {title:'Your results', pts:0, intro:''}
+];
+let app = 'cafe', step = 0, scores = [0,0,0,0], checked = false;
+const D = () => DATA[app];
+function stepper(){ $('stepper').innerHTML = ['Tables','Columns','Keys and types','Review','Results'].map((s,i) => `<span class="${i === step ? 'on' : i < step ? 'done' : ''}">${i+1}. ${s}</span>`).join(''); }
+function total(){ return Math.round(scores.reduce((a,b) => a+b, 0)); }
+function updatePill(){ $('pill').textContent = `Score ${total()} / 100`; }
+function render(){
+  checked = false; stepper();
+  const st = STEPS[step], d = D();
+  $('stitle').textContent = st.title; $('sintro').textContent = st.intro; $('sfb').innerHTML = '';
+  $('check').hidden = step === 4; $('nextstep').hidden = true;
+  $('brief').innerHTML = d.brief;
+  const b = $('sbody'); b.className = '';
+  if (step === 0){
+    b.innerHTML = '<div class="cards">' + d.tables.map((t,i) => `<button type="button" class="tcard" aria-pressed="false" data-i="${i}"><b>${t.name}</b><small>${t.desc}</small><span class="why">${t.why}</span></button>`).join('') + '</div>';
+  } else if (step === 1){
+    const opts = '<option value="">Choose a table</option>' + d.tableNames.map(n => `<option>${n}</option>`).join('');
+    b.innerHTML = '<div class="colgrid">' + d.columns.map((c,i) => `<div class="colrow" data-i="${i}"><span><code>${c[0]}</code><small>${c[2]}</small></span><select data-i="${i}" aria-label="Table for ${c[0]}">${opts}</select></div>`).join('') + '</div>';
+  } else if (step === 2){
+    b.innerHTML = d.mcq.map((m,i) => `<fieldset class="mcq" data-i="${i}" style="margin:0 0 10px"><p>${i+1}. ${m.q}</p>` + m.o.map((o,j) => `<label><input type="radio" name="m${i}" value="${j}"> <span>${esc(o)}</span></label>`).join('') + '<div class="why" hidden></div></fieldset>').join('');
+  } else if (step === 3){
+    b.innerHTML = '<div class="schema">' + d.flawed.map((l,i) => l.fixed ? `<label class="fixed"><span style="width:16px"></span><span>${esc(l.t)}</span></label>` : `<label data-i="${i}"><input type="checkbox" data-i="${i}"> <span>${esc(l.t)}<span class="why" hidden></span></span></label>`).join('') + '</div>';
+  } else {
+    const names = ['Tables','Columns','Keys and types','Review'];
+    b.innerHTML = `<div class="score"><span class="big">${total()} / 100</span><span>${total() >= 90 ? 'Excellent data model.' : total() >= 70 ? 'Solid. Review the explanations you missed.' : 'Keep going: retake it before writing your schema.sql.'}</span></div>` +
+      '<div class="sumbar">' + scores.map((s,i) => `<div>${names[i]}<b>${Math.round(s*10)/10} / ${STEPS[i].pts}</b></div>`).join('') + '</div>' +
+      `<h3>Model schema.sql for ${app === 'cafe' ? 'Option A' : 'Option B'}</h3><p style="margin-top:0;color:var(--ink-2)">Compare it with yours. <code>user_id</code> can be empty for now because login arrives in Week 6. Write your own version for Assignment 4.1; do not copy this one.</p><div class="model">${esc(d.model)}</div>` +
+      '<div style="margin-top:14px"><button class="btn primary" id="again" type="button">Start again</button></div>';
+    $('again').addEventListener('click', () => { step = 0; scores = [0,0,0,0]; updatePill(); render(); });
+    if (hasGSAP) gsap.from('#sbody .big', {scale:0.6, opacity:0, duration:0.5, ease:'back.out(2)'});
+  }
+  if (hasGSAP && step < 4) gsap.from('#sbody > *', {opacity:0, y:8, duration:0.3});
+}
+function check(){
+  const d = D(); let got = 0, n = 0, msg = '';
+  if (step === 0){
+    $('sbody').classList.add('checked');
+    document.querySelectorAll('.tcard').forEach(c => { const t = d.tables[+c.dataset.i]; const sel = c.getAttribute('aria-pressed') === 'true'; n++; if (sel === t.need){ got++; } c.classList.add(sel === t.need ? 'right' : 'wrong'); c.disabled = true; c.insertAdjacentHTML('beforeend', `<span class="verdict" style="color:${t.need ? '#14532D' : '#6B7280'}">${t.need ? 'Should be a table' : 'Not a table'}${sel === t.need ? '' : (sel ? ' (you selected it)' : ' (you skipped it)')}</span>`); });
+    scores[0] = 20 * got / n; msg = `${got} of ${n} cards decided correctly. Green cards were right, red ones wrong. Read the reason on each card.`;
+  } else if (step === 1){
+    document.querySelectorAll('.colrow').forEach(r => { const c = d.columns[+r.dataset.i]; const v = r.querySelector('select').value; n++; const ok = v === c[1]; if (ok) got++; r.classList.add(ok ? 'right' : 'wrong'); r.querySelector('select').disabled = true; if (!ok){ const s = document.createElement('small'); s.textContent = 'belongs in ' + c[1]; s.style.color = '#7F1D1D'; r.firstElementChild.appendChild(s); } });
+    scores[1] = 30 * got / n; msg = `${got} of ${n} columns placed correctly. Notice the pattern: each column describes exactly one row of its table.`;
+  } else if (step === 2){
+    document.querySelectorAll('.mcq').forEach(f => { const m = d.mcq[+f.dataset.i]; const pick = f.querySelector('input:checked'); n++; const v = pick ? +pick.value : -1; if (v === m.a) got++;
+      f.querySelectorAll('label').forEach((l,j) => { if (j === m.a) l.classList.add('right'); else if (j === v) l.classList.add('wrong'); l.querySelector('input').disabled = true; });
+      const w = f.querySelector('.why'); w.hidden = false; w.innerHTML = m.why; });
+    scores[2] = 30 * got / n; msg = `${got} of ${n} correct.`;
+  } else if (step === 3){
+    document.querySelectorAll('.schema label[data-i]').forEach(l => { const line = d.flawed[+l.dataset.i]; const sel = l.querySelector('input').checked; n++; const ok = sel === line.bad; if (ok) got++; l.classList.add(ok ? 'right' : 'wrong'); l.querySelector('input').disabled = true; const w = l.querySelector('.why'); w.hidden = false; w.textContent = (line.bad ? 'Problem: ' : 'OK: ') + line.why; });
+    scores[3] = 20 * got / n; msg = `${got} of ${n} lines judged correctly. This is the habit that matters: read every line an assistant writes before you run it.`;
+  }
+  checked = true; updatePill();
+  $('sfb').innerHTML = `<div class="feedback ${got === n ? 'ok' : 'info'}"><b>+${Math.round(STEPS[step].pts * got / n * 10)/10} points.</b> ${msg}</div>`;
+  $('check').hidden = true; $('nextstep').hidden = false; $('nextstep').textContent = step === 3 ? 'See my results' : 'Next step'; $('nextstep').focus();
+}
+$('sbody').addEventListener('click', e => { const c = e.target.closest('.tcard'); if (c && !checked){ c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); } });
+$('check').addEventListener('click', check);
+$('nextstep').addEventListener('click', () => { step++; render(); });
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  app = b.dataset.app;
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  step = 0; scores = [0,0,0,0]; updatePill(); render();
+}));
+render();
+window.__dm = {DATA};
+</script>
+
+</body>
+</html>

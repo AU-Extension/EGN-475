@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flask Request Lifecycle</title>
+<meta name="description" content="EGN 475 Week 3 interactive: follow one web request through Flask routes, a view function, a Jinja template and back to the browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .controls{display:grid;gap:14px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .seg button{font:inherit;font-size:14px;font-weight:600;border:0;background:#fff;padding:8px 14px;cursor:pointer;color:var(--ink-2)}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .urlrow{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+  .urlbox{display:flex;flex:1 1 320px;min-width:0;border:1px solid #CBD2DA;border-radius:8px;overflow:hidden;background:#fff}
+  .urlbox span{font-family:var(--mono);font-size:14px;color:var(--muted);background:#F1F3F6;padding:9px 8px 9px 10px;border-right:1px solid #E3E6EB;white-space:nowrap}
+  .urlbox input{border:0;border-radius:0;flex:1;min-width:0;font-family:var(--mono)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font:inherit;font-family:var(--mono);font-size:13px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;cursor:pointer;color:var(--ink-2)}
+  .chip:hover{border-color:var(--au-red);color:var(--au-red-dark)}
+  .chip small{font-family:var(--sans);color:var(--muted);margin-left:4px}
+  .toggle{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:var(--ink-2)}
+  .toggle input{margin-top:4px}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap}
+  .pipe{margin:16px 0}
+  .pipe svg{width:100%;height:auto;display:block}
+  .station rect{fill:#fff;stroke:#CBD2DA;stroke-width:2}
+  .station.on rect{stroke:var(--au-red);fill:var(--au-red-soft)}
+  .station.done rect{stroke:var(--net-green);fill:#F1FAF4}
+  .station.err rect{stroke:var(--bad);fill:var(--bad-soft)}
+  .station text{font-size:15px;font-weight:600;fill:var(--ink)}
+  .station text.sub{font-size:12px;font-weight:400;fill:var(--muted)}
+  .steplist{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .steplist button{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 10px;cursor:pointer}
+  .steplist button[aria-current="step"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .stephead{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--au-red-dark)}
+  .explain{color:var(--ink-2);margin:8px 0 12px}
+  .code{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.55;border-radius:10px;padding:12px 0;overflow:auto}
+  .code .ln{display:block;padding:0 14px;white-space:pre}
+  .code .ln.hl{background:rgba(225,20,30,.28);box-shadow:inset 3px 0 0 #FF5A5F}
+  .code .ln.ok{background:rgba(21,128,61,.30);box-shadow:inset 3px 0 0 #4ADE80}
+  .code .ln.dim{opacity:.45}
+  .tag{display:inline-block;font-size:12px;font-weight:600;border-radius:6px;padding:1px 7px;margin-left:8px;font-family:var(--sans)}
+  .tag.ok{background:#14532D;color:#DCFCE7}.tag.no{background:#3B4250;color:#E5E7EB}.tag.re{background:#7C2D12;color:#FFEDD5}
+  .browser{border:1px solid #CBD2DA;border-radius:12px;overflow:hidden;background:#fff}
+  .browser .bar{display:flex;gap:8px;align-items:center;background:#EEF1F5;padding:8px 10px;border-bottom:1px solid #DDE2E8}
+  .browser .dots{display:flex;gap:5px}.browser .dots i{width:10px;height:10px;border-radius:50%;background:#CBD2DA;display:block}
+  .browser .addr{flex:1;min-width:0;font-family:var(--mono);font-size:12px;background:#fff;border:1px solid #DDE2E8;border-radius:6px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .browser .view{padding:16px;min-height:200px;font-family:Georgia,serif}
+  .browser .view nav{font-family:var(--sans);font-size:13px;display:flex;gap:12px;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:12px;flex-wrap:wrap}
+  .browser .view nav a{color:#1D4ED8}
+  .browser .view h1{font-size:24px;margin:0 0 8px}
+  .browser .view ul{padding-left:20px}
+  .browser .view a{color:#1D4ED8}
+  .browser .view.plain{font-family:Times,serif}
+  .status{display:inline-block;font-family:var(--mono);font-size:13px;font-weight:600;border-radius:6px;padding:3px 9px}
+  .status.s2{background:var(--ok-soft);color:#14532D}.status.s3{background:var(--warn-soft);color:#7C2D12}.status.s4,.status.s5{background:var(--bad-soft);color:#7F1D1D}
+  .rt td,.rt th{font-family:var(--mono);font-size:13px}
+  .rt th{font-family:var(--sans)}
+  .rt tr.match td{background:var(--ok-soft)}
+  .rt tr.nomatch td{color:var(--muted)}
+  .rt tr.redir td{background:var(--warn-soft)}
+  .note{font-size:13px;color:var(--muted)}
+  .controls>*{min-width:0}
+  .seg{flex-wrap:wrap;max-width:100%}
+  .seg button{flex:1 1 auto}
+  .note code{word-break:break-all}
+  .urlbox{flex:1 1 220px}
+  @media(max-width:520px){.urlbox span{font-size:12px;padding:9px 6px}.seg button{font-size:13px;padding:8px 10px}}
+  .grid>*{min-width:0}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 3 · Interactive A</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 3 · Explorer</span>
+    <h1>Flask request lifecycle</h1>
+    <p class="lede">Type a URL and follow the request through your Flask app: the route table picks a view function, the view sends data to a Jinja template, and the finished HTML travels back to the browser. Try the broken URLs too, because seeing a 404 happen step by step makes it much easier to fix one.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol>
+      <li>Pick the app you are building this term: Option A (café) or Option B (salon).</li>
+      <li>Click one of the example URLs or type your own path after the address.</li>
+      <li>Press "Send request" to play the whole journey, or "Next step" to move one station at a time.</li>
+      <li>Read the highlighted code at each station and the explanation under it.</li>
+      <li>Turn on "Forget to pass data to render_template()" and send the same requests again to see which pages break loudly and which fail silently.</li>
+    </ol>
+  </details>
+
+  <section class="card controls" aria-label="Request controls">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+      <div class="seg" role="group" aria-label="Choose your app">
+        <button type="button" data-app="cafe" aria-pressed="true">Option A: Café Calle Ocho</button>
+        <button type="button" data-app="salon" aria-pressed="false">Option B: Bella Vista Salon</button>
+      </div>
+      <span class="note">Your app runs locally with <code>flask --app app run --debug</code></span>
+    </div>
+    <div class="urlrow">
+      <label class="urlbox" for="url"><span>http://127.0.0.1:5000</span><input id="url" type="text" value="/menu" spellcheck="false" autocomplete="off" aria-label="Path to request"></label>
+      <div class="btnrow">
+        <button class="btn primary" id="send" type="button">Send request</button>
+        <button class="btn" id="next" type="button">Next step</button>
+        <button class="btn" id="reset" type="button">Reset</button>
+      </div>
+    </div>
+    <div>
+      <div class="note" style="margin-bottom:6px">Example URLs (click one):</div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <label class="toggle"><input type="checkbox" id="forget"> <span>Forget to pass data to <code>render_template()</code> (a very common Copilot and beginner mistake)</span></label>
+  </section>
+
+  <div class="pipe card" aria-hidden="true" style="padding:12px 14px">
+    <svg viewBox="0 0 1000 120" id="pipe">
+      <line x1="90" y1="60" x2="910" y2="60" stroke="#CBD2DA" stroke-width="3" stroke-dasharray="6 6"/>
+      <g class="station" data-st="0"><rect x="10" y="22" width="160" height="76" rx="12"/><text x="90" y="56" text-anchor="middle">Browser</text><text class="sub" x="90" y="78" text-anchor="middle">sends the request</text></g>
+      <g class="station" data-st="1"><rect x="215" y="22" width="160" height="76" rx="12"/><text x="295" y="56" text-anchor="middle">URL rules</text><text class="sub" x="295" y="78" text-anchor="middle">@app.route table</text></g>
+      <g class="station" data-st="2"><rect x="420" y="22" width="160" height="76" rx="12"/><text x="500" y="56" text-anchor="middle">View function</text><text class="sub" x="500" y="78" text-anchor="middle">your Python code</text></g>
+      <g class="station" data-st="3"><rect x="625" y="22" width="160" height="76" rx="12"/><text x="705" y="56" text-anchor="middle">Jinja template</text><text class="sub" x="705" y="78" text-anchor="middle">templates/*.html</text></g>
+      <g class="station" data-st="4"><rect x="830" y="22" width="160" height="76" rx="12"/><text x="910" y="56" text-anchor="middle">Response</text><text class="sub" x="910" y="78" text-anchor="middle">status + HTML</text></g>
+      <circle id="packet" cx="90" cy="14" r="9" fill="#E1141E"/>
+    </svg>
+  </div>
+
+  <div class="grid two">
+    <section class="card" aria-live="polite">
+      <div class="steplist" id="steplist" aria-label="Steps of this request"></div>
+      <div class="stephead" id="stephead">Ready</div>
+      <h2 id="steptitle" style="margin-top:4px">Pick a URL and press "Send request"</h2>
+      <p class="explain" id="stepexplain">Every page in a Flask app is the result of this same short journey. Once you can follow it, you can find almost any bug in Weeks 3 to 8.</p>
+      <div id="stepbody"></div>
+    </section>
+    <aside class="grid" style="align-content:start">
+      <section class="card">
+        <h2>What the browser shows</h2>
+        <div class="browser">
+          <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="addr" id="addr">http://127.0.0.1:5000/</span><span class="status s2" id="status" hidden>200 OK</span></div>
+          <div class="view" id="view"><p style="color:#6B7280;font-family:var(--sans)">Nothing loaded yet.</p></div>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Your app's route table</h2>
+        <div class="scroll-x"><table class="data rt" id="routes"></table></div>
+        <p class="note" style="margin-top:8px">Flask checks the path against these rules. A rule ending in <code>/</code> also catches the same path without the slash and redirects (308). A rule without the slash does not match a path that has one.</p>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const money = c => (c/100).toFixed(2);
+
+const APPS = {
+  cafe: {
+    shop: 'Café Calle Ocho',
+    listName: 'menu', listTitle: 'Menu', itemFn: 'item_detail', idName: 'item_id',
+    rules: [
+      {rule:'/', fn:'index', tpl:'index.html'},
+      {rule:'/menu', fn:'menu', tpl:'menu.html'},
+      {rule:'/menu/<int:item_id>', fn:'item_detail', tpl:'item.html'},
+      {rule:'/orders/', fn:'orders', tpl:'orders.html'},
+      {rule:'/about', fn:'about', tpl:'about.html'}
+    ],
+    items: [
+      {id:1, name:'Café con leche', category:'Drinks', price_cents:350},
+      {id:2, name:'Cuban sandwich', category:'Food', price_cents:1100},
+      {id:3, name:'Guava pastelito', category:'Bakery', price_cents:225}
+    ],
+    records: [
+      {id:101, name:'Maria', status:'preparing'},
+      {id:102, name:'Jorge', status:'ready'}
+    ],
+    recordsVar: 'orders', recordsFn: 'orders', recordsTitle: 'Orders', recordField: 'customer_name',
+    chips: [['/','home'],['/menu','list'],['/menu/2','one item'],['/menu/99','missing id'],['/menu/latte','text, not a number'],['/orders','no slash'],['/orders/','orders'],['/about/','extra slash'],['/menu?category=Food','query string']]
+  },
+  salon: {
+    shop: 'Bella Vista Salon',
+    listName: 'services', listTitle: 'Services', itemFn: 'service_detail', idName: 'service_id',
+    rules: [
+      {rule:'/', fn:'index', tpl:'index.html'},
+      {rule:'/services', fn:'services', tpl:'services.html'},
+      {rule:'/services/<int:service_id>', fn:'service_detail', tpl:'service.html'},
+      {rule:'/appointments/', fn:'appointments', tpl:'appointments.html'},
+      {rule:'/about', fn:'about', tpl:'about.html'}
+    ],
+    items: [
+      {id:1, name:'Haircut', category:'45 minutes', price_cents:4500},
+      {id:2, name:'Color', category:'90 minutes', price_cents:9500},
+      {id:3, name:'Blowout', category:'30 minutes', price_cents:3500}
+    ],
+    records: [
+      {id:201, name:'Ana', status:'confirmed'},
+      {id:202, name:'Luis', status:'requested'}
+    ],
+    recordsVar: 'appointments', recordsFn: 'appointments', recordsTitle: 'Appointments', recordField: 'client_name',
+    chips: [['/','home'],['/services','list'],['/services/2','one service'],['/services/99','missing id'],['/services/color','text, not a number'],['/appointments','no slash'],['/appointments/','appointments'],['/about/','extra slash'],['/services?sort=price','query string']]
+  }
+};
+let appKey = 'cafe';
+const A = () => APPS[appKey];
+
+/* ---------- route matching (Werkzeug rules, simplified for these tables) ---------- */
+function matchRule(rule, path){
+  const rs = rule.split('/'), ps = path.split('/');
+  if (rs.length !== ps.length) return null;
+  const args = {};
+  for (let i=0;i<rs.length;i++){
+    const r = rs[i], p = ps[i];
+    const m = r.match(/^<(?:(int|string|path):)?(\w+)>$/);
+    if (m){
+      const conv = m[1] || 'string';
+      if (conv === 'int'){ if (!/^\d+$/.test(p)) return null; args[m[2]] = parseInt(p,10); }
+      else { if (!/^[^/]+$/.test(p)) return null; args[m[2]] = p; }
+    } else if (r !== p) return null;
+  }
+  return args;
+}
+function route(path){
+  const checks = [];
+  let found = null;
+  for (const r of A().rules){
+    const args = matchRule(r.rule, path);
+    if (args && !found){ found = {r, args, redirect:false}; checks.push({r, res:'match', args}); continue; }
+    if (!found && r.rule.endsWith('/') && r.rule !== '/' && !path.endsWith('/') && matchRule(r.rule, path + '/')){
+      found = {r, args:{}, redirect:true}; checks.push({r, res:'redirect'}); continue;
+    }
+    checks.push({r, res: found ? 'skip' : 'no'});
+  }
+  return {checks, found};
+}
+
+/* ---------- view code, templates, rendering ---------- */
+function viewCode(r, forget){
+  const a = A(), L = [];
+  const pass = (s) => forget ? '' : s;
+  L.push(`@app.route("${r.rule}")`);
+  if (r.fn === 'index'){
+    L.push(`def index():`);
+    L.push(`    return render_template("index.html"${pass(`, shop_name="${a.shop}"`)})`);
+  } else if (r.fn === a.listName){
+    L.push(`def ${r.fn}():`);
+    L.push(`    ${a.listName} = SAMPLE_${a.listName.toUpperCase()}   # a Python list of dicts`);
+    L.push(`    return render_template("${r.tpl}"${pass(`, ${a.listName}=${a.listName}`)})`);
+  } else if (r.fn === a.itemFn){
+    const v = appKey === 'cafe' ? 'item' : 'service';
+    L.push(`def ${r.fn}(${a.idName}):`);
+    L.push(`    ${v} = find_by_id(SAMPLE_${a.listName.toUpperCase()}, ${a.idName})`);
+    L.push(`    if ${v} is None:`);
+    L.push(`        abort(404)`);
+    L.push(`    return render_template("${r.tpl}"${pass(`, ${v}=${v}`)})`);
+  } else if (r.fn === a.recordsFn){
+    L.push(`def ${r.fn}():`);
+    L.push(`    ${a.recordsVar} = SAMPLE_${a.recordsVar.toUpperCase()}`);
+    L.push(`    return render_template("${r.tpl}"${pass(`, ${a.recordsVar}=${a.recordsVar}`)})`);
+  } else {
+    L.push(`def about():`);
+    L.push(`    return render_template("about.html")`);
+  }
+  return L;
+}
+function tplSource(r){
+  const a = A(), L = ['{% extends "base.html" %}', '{% block content %}'];
+  const v = appKey === 'cafe' ? 'item' : 'service';
+  if (r.fn === 'index'){
+    L.push('<h1>Welcome to {{ shop_name }}</h1>');
+    L.push(`<p><a href="{{ url_for('${a.listName}') }}">See our ${a.listName}</a></p>`);
+  } else if (r.fn === a.listName){
+    L.push(`<h1>${a.listTitle}</h1>`, '<ul>');
+    L.push(`{% for ${v} in ${a.listName} %}`);
+    L.push(`  <li><a href="{{ url_for('${a.itemFn}', ${a.idName}=${v}.id) }}">{{ ${v}.name }}</a>`);
+    L.push(`      \${{ "%.2f"|format(${v}.price_cents / 100) }}</li>`);
+    L.push('{% endfor %}', '</ul>');
+  } else if (r.fn === a.itemFn){
+    L.push(`<h1>{{ ${v}.name }}</h1>`);
+    L.push(`<p>{{ ${v}.category }} · \${{ "%.2f"|format(${v}.price_cents / 100) }}</p>`);
+    L.push(`<p><a href="{{ url_for('${a.listName}') }}">Back to ${a.listName}</a></p>`);
+  } else if (r.fn === a.recordsFn){
+    L.push(`<h1>${a.recordsTitle}</h1>`, '<ul>');
+    L.push(`{% for r in ${a.recordsVar} %}`);
+    L.push(`  <li>#{{ r.id }} {{ r.${a.recordField} }}: {{ r.status }}</li>`);
+    L.push('{% else %}', `  <li>No ${a.recordsVar} yet</li>`, '{% endfor %}', '</ul>');
+  } else {
+    L.push('<h1>About us</h1>', '<p>A family business in Miami since 1998.</p>');
+  }
+  L.push('{% endblock %}');
+  return L;
+}
+// Returns {status, html} or {error}
+function render(r, args, forget){
+  const a = A();
+  if (r.fn === 'index') return {status:200, html:`<h1>Welcome to ${forget ? '' : esc(a.shop)}</h1>\n<p><a href="/${a.listName}">See our ${a.listName}</a></p>`,
+    note: forget ? 'shop_name was never passed, so Jinja printed nothing. No error, just a strange blank. Silent bugs like this are why you check every page with your own eyes.' : ''};
+  if (r.fn === a.listName){
+    const rows = forget ? [] : a.items;
+    const lis = rows.map(it => `  <li><a href="/${a.listName}/${it.id}">${esc(it.name)}</a>\n      $${money(it.price_cents)}</li>`).join('\n');
+    return {status:200, html:`<h1>${a.listTitle}</h1>\n<ul>\n${lis}\n</ul>`, note: forget ? `${a.listName} was never passed. A for loop over an undefined name simply runs zero times, so the page loads with an empty list and no error message.` : ''};
+  }
+  if (r.fn === a.itemFn){
+    const it = a.items.find(x => x.id === args[a.idName]);
+    if (!it) return {abort:true};
+    const v = appKey === 'cafe' ? 'item' : 'service';
+    if (forget) return {error:`jinja2.exceptions.UndefinedError: '${v}' is undefined`};
+    return {status:200, html:`<h1>${esc(it.name)}</h1>\n<p>${esc(it.category)} · $${money(it.price_cents)}</p>\n<p><a href="/${a.listName}">Back to ${a.listName}</a></p>`};
+  }
+  if (r.fn === a.recordsFn){
+    const rows = forget ? [] : a.records;
+    const lis = rows.length ? rows.map(x => `  <li>#${x.id} ${esc(x.name)}: ${x.status}</li>`).join('\n') : `  <li>No ${a.recordsVar} yet</li>`;
+    return {status:200, html:`<h1>${a.recordsTitle}</h1>\n<ul>\n${lis}\n</ul>`, note: forget ? `The {% else %} branch of the for loop ran, so the page says "No ${a.recordsVar} yet" even though there is data. The bug is in the view, not the template.` : ''};
+  }
+  return {status:200, html:'<h1>About us</h1>\n<p>A family business in Miami since 1998.</p>'};
+}
+const NOT_FOUND = '<!doctype html>\n<html lang=en>\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>';
+
+/* ---------- build the step list for one request ---------- */
+function codeBlock(lines, cls){ // cls: {index: 'hl'|'ok'|'dim'}
+  return '<div class="code">' + lines.map((l,i) => `<span class="ln ${cls && cls[i] ? cls[i] : ''}">${esc(l)}</span>`).join('') + '</div>';
+}
+function buildSteps(rawPath, forget, hop){
+  const steps = [];
+  let path = rawPath.trim() || '/';
+  if (!path.startsWith('/')) path = '/' + path;
+  let query = '';
+  if (path.includes('?')){ query = path.slice(path.indexOf('?')); path = path.slice(0, path.indexOf('?')); }
+  steps.push({st:0, head:'Station 1 · Browser', title:`GET ${esc(path + query)}`, explain:
+    `The browser sends an HTTP request. The method is GET because you typed a URL (forms can send POST). Flask only looks at the path <code>${esc(path)}</code> to choose a route.` +
+    (query ? ` The query string <code>${esc(query)}</code> is not part of the route. Your view can read it with <code>request.args.get(...)</code>.` : '') +
+    (hop ? ' This second request happened automatically because the browser followed the redirect.' : ''),
+    body: codeBlock([`GET ${path}${query} HTTP/1.1`, 'Host: 127.0.0.1:5000', 'Accept: text/html'])});
+
+  const {checks, found} = route(path);
+  const rows = checks.map(c => `@app.route("${c.r.rule}")  → ${c.r.fn}()   # ` + ({match:'match', redirect:'match after adding /', skip:'not needed', no:'no match'})[c.res]);
+  const cls = {}; checks.forEach((c,i) => cls[i] = c.res === 'match' || c.res === 'redirect' ? 'ok' : 'dim');
+  const routesHTML = codeBlock(rows, cls);
+  if (!found){
+    let why = `No rule matches <code>${esc(path)}</code>, so Flask answers 404 Not Found without running any of your code.`;
+    const intRule = A().rules.find(r => r.rule.includes('<int:'));
+    const base = intRule.rule.split('/<')[0];
+    if (path.startsWith(base + '/') && path.split('/').length === 3 && !path.endsWith('/')) why += ` The rule <code>${esc(intRule.rule)}</code> only accepts digits, so <code>${esc(path.split('/')[2])}</code> does not fit the <code>int</code> converter.`;
+    if (path.endsWith('/') && path !== '/') why += ` Notice the trailing slash: a rule written without a slash (like <code>/about</code>) does not match <code>${esc(path)}</code>.`;
+    if (/[A-Z]/.test(path)) why += ' Paths are case sensitive, so capital letters matter.';
+    steps.push({st:1, head:'Station 2 · URL rules', title:'No rule matches', explain: why, body: routesHTML, err:true});
+    steps.push({st:4, head:'Station 5 · Response', title:'404 Not Found', explain:'Flask sends its built-in 404 page. Your view functions and templates never ran. To fix it, either correct the URL (or the link that produced it) or add a route.', body: codeBlock(['HTTP/1.1 404 NOT FOUND', 'Content-Type: text/html; charset=utf-8', '', ...NOT_FOUND.split('\n')]), final:{status:404, path, query, html:NOT_FOUND, plain:true}, err:true});
+    return steps;
+  }
+  if (found.redirect){
+    steps.push({st:1, head:'Station 2 · URL rules', title:`Close match: ${esc(found.r.rule)}`, explain:`The rule <code>${esc(found.r.rule)}</code> ends with a slash. When you visit it without the slash, Flask does not run the view. It answers with a redirect to the "canonical" address that has the slash.`, body: routesHTML});
+    steps.push({st:4, head:'Station 5 · Response', title:'308 Permanent Redirect', explain:`The response has no page, only a <code>Location</code> header. The browser immediately sends a new request to <code>${esc(path)}/</code>. Press "Next step" to follow it.`, body: codeBlock(['HTTP/1.1 308 PERMANENT REDIRECT', `Location: ${path}/`]), final:{status:308, path, query, redirectTo: path + '/' + query}});
+    return steps.concat(buildSteps(path + '/' + query, forget, true));
+  }
+  const argTxt = Object.keys(found.args).length ? ` with ${Object.entries(found.args).map(([k,v]) => `<code>${k}=${esc(JSON.stringify(v))}</code>`).join(', ')}` : '';
+  steps.push({st:1, head:'Station 2 · URL rules', title:`Matched ${esc(found.r.rule)}`, explain:`Flask found the rule and will call <code>${found.r.fn}()</code>${argTxt}.` + (found.r.rule.includes('<int:') ? ' The <code>int</code> converter already turned the text from the URL into a Python integer.' : ''), body: routesHTML});
+
+  const code = viewCode(found.r, forget);
+  const res = render(found.r, found.args, forget);
+  const vcls = {}; code.forEach((l,i) => vcls[i] = '');
+  if (res.abort){
+    const ai = code.findIndex(l => l.includes('abort(404)')); vcls[ai-1] = 'hl'; vcls[ai] = 'hl';
+    steps.push({st:2, head:'Station 3 · View function', title:`${found.r.fn}() runs, then stops`, explain:`The route matched, but there is no record with id ${found.args[A().idName]} in the sample data. The view calls <code>abort(404)</code>, which stops the function immediately. This is a 404 created by your own code, not by the route table.`, body: codeBlock(code, vcls), err:true});
+    steps.push({st:4, head:'Station 5 · Response', title:'404 Not Found', explain:'Same 404 page as before, but for a different reason: the URL was valid, the data was missing. In Week 4 this check will look in the database instead of a list.', body: codeBlock(['HTTP/1.1 404 NOT FOUND', '', ...NOT_FOUND.split('\n')]), final:{status:404, path, query, html:NOT_FOUND, plain:true}, err:true});
+    return steps;
+  }
+  const ri = code.findIndex(l => l.includes('render_template')); vcls[ri] = forget && found.r.fn !== 'about' ? 'hl' : 'ok';
+  steps.push({st:2, head:'Station 3 · View function', title:`${found.r.fn}() runs`, explain: forget && found.r.fn !== 'about' ? 'Look closely at the highlighted line: the template name is there, but the data is not. Python does not complain. The problem only shows up in the template.' : `Your Python code prepares the data and hands it to <code>render_template()</code> as keyword arguments. Each name you pass becomes a variable inside the template.`, body: codeBlock(code, vcls)});
+  const tpl = tplSource(found.r);
+  const tcls = {0:'dim', 1:'dim'}; tcls[tpl.length-1] = 'dim';
+  if (res.error){
+    tpl.forEach((l,i) => { if (/\{\{\s*(item|service)\./.test(l)) tcls[i] = 'hl'; });
+    steps.push({st:3, head:'Station 4 · Jinja template', title:`${found.r.tpl} fails`, explain:`The template asks for an attribute of a variable that was never passed. Printing a missing variable gives a blank, but reading <code>.name</code> from it raises an error.`, body: codeBlock(tpl, tcls), err:true});
+    const err = ['HTTP/1.1 500 INTERNAL SERVER ERROR', '', 'Traceback (most recent call last):', `  File "templates/${found.r.tpl}", line 3, in block 'content'`, `    ${tpl[2]}`, res.error];
+    steps.push({st:4, head:'Station 5 · Response', title:'500 Internal Server Error', explain:'With <code>--debug</code> you see this traceback in the browser and in the terminal. Read the last line first: it names the missing variable. Then add it to <code>render_template()</code> in the view.', body: codeBlock(err, {5:'hl'}), final:{status:500, path, query, html:'<h1>Internal Server Error</h1>\n<p>' + esc(res.error) + '</p>', plain:true}, err:true});
+    return steps;
+  }
+  steps.push({st:3, head:'Station 4 · Jinja template', title:`${found.r.tpl} becomes HTML`, explain:'Jinja replaces <code>{{ ... }}</code> with values, runs <code>{% for %}</code> and <code>{% if %}</code>, and builds links with <code>url_for()</code> so they never go stale. <code>{% extends "base.html" %}</code> wraps this block in your shared layout and navigation.' + (res.note ? ' <b>Watch out:</b> ' + res.note : ''), body: codeBlock(tpl, tcls)});
+  steps.push({st:4, head:'Station 5 · Response', title:'200 OK', explain:'Flask sends the finished HTML (inside the base.html layout) back to the browser, which draws the page. The browser never sees your Python code or the Jinja tags, only the result.', body: codeBlock(['HTTP/1.1 200 OK', 'Content-Type: text/html; charset=utf-8', '', '<!-- base.html layout and <nav> here -->', ...res.html.split('\n')]), final:{status:200, path, query, html:res.html}});
+  return steps;
+}
+
+/* ---------- UI ---------- */
+const $ = id => document.getElementById(id);
+let steps = [], cur = -1, playing = null;
+
+function drawRoutes(highlight){
+  const t = $('routes');
+  t.innerHTML = '<tr><th>Rule</th><th>View function</th><th>Template</th></tr>' + A().rules.map(r => {
+    let c = '';
+    if (highlight){ const h = highlight.find(x => x.r === r); if (h) c = h.res === 'match' ? 'match' : h.res === 'redirect' ? 'redir' : 'nomatch'; }
+    return `<tr class="${c}"><td>${esc(r.rule)}</td><td>${r.fn}()</td><td>${r.tpl}</td></tr>`;
+  }).join('');
+}
+function drawChips(){
+  $('chips').innerHTML = A().chips.map(([u, l]) => `<button type="button" class="chip" data-u="${esc(u)}">${esc(u)}<small>${esc(l)}</small></button>`).join('');
+}
+function stationXY(st){ return 90 + st * 205; }
+function setStations(){
+  document.querySelectorAll('.station').forEach(g => g.classList.remove('on','done','err'));
+  if (cur < 0) return;
+  const s = steps[cur];
+  for (let i=0;i<=cur;i++){
+    const g = document.querySelector(`.station[data-st="${steps[i].st}"]`);
+    g.classList.remove('on'); g.classList.add(steps[i].err ? 'err' : 'done');
+  }
+  const g = document.querySelector(`.station[data-st="${s.st}"]`); g.classList.remove('done'); g.classList.add(s.err ? 'err' : 'on');
+  const x = stationXY(s.st), p = $('packet');
+  p.setAttribute('fill', s.err ? '#B91C1C' : '#E1141E');
+  if (hasGSAP) gsap.to(p, {attr:{cx:x}, duration:0.6, ease:'power2.inOut'}); else p.setAttribute('cx', x);
+}
+function showBrowser(final){
+  const base = 'http://127.0.0.1:5000';
+  if (!final){ $('addr').textContent = base + '/'; $('status').hidden = true; $('view').className = 'view'; $('view').innerHTML = '<p style="color:#6B7280;font-family:var(--sans)">Waiting for the response...</p>'; return; }
+  $('addr').textContent = base + final.path + (final.query || '');
+  const st = $('status'); st.hidden = false;
+  const text = {200:'200 OK', 308:'308 Redirect', 404:'404 Not Found', 500:'500 Server Error'}[final.status];
+  st.textContent = text; st.className = 'status s' + String(final.status)[0];
+  const v = $('view');
+  if (final.status === 308){ v.className = 'view'; v.innerHTML = `<p style="font-family:var(--sans)">Redirecting to <code>${esc(final.redirectTo)}</code>...</p>`; return; }
+  if (final.plain){ v.className = 'view plain'; v.innerHTML = final.html.replace(/<!doctype html>|<html lang=en>|<title>.*?<\/title>/g,''); return; }
+  const a = A();
+  v.className = 'view';
+  v.innerHTML = `<nav><b>${esc(a.shop)}</b><a href="#" data-go="/">Home</a><a href="#" data-go="/${a.listName}">${a.listTitle}</a><a href="#" data-go="/${a.recordsVar}/">${a.recordsTitle}</a><a href="#" data-go="/about">About</a></nav>` + final.html.replace(/href="(\/[^"]*)"/g, 'href="#" data-go="$1"');
+  if (hasGSAP) gsap.from(v, {opacity:0, y:6, duration:0.35});
+}
+function show(i){
+  cur = i; const s = steps[i];
+  $('stephead').textContent = s.head; $('steptitle').innerHTML = s.title; $('stepexplain').innerHTML = s.explain; $('stepbody').innerHTML = s.body;
+  document.querySelectorAll('#steplist button').forEach((b, j) => b.setAttribute('aria-current', j === i ? 'step' : 'false'));
+  setStations();
+  if (s.st === 1){ const {checks} = route(lastPathFor(i)); drawRoutes(checks); }
+  // browser pane: show the last final up to this step
+  let fin = null; for (let j=0;j<=i;j++) if (steps[j].final) fin = steps[j].final;
+  showBrowser(fin);
+  $('next').disabled = i >= steps.length - 1;
+}
+function lastPathFor(i){ // path of the request that step i belongs to
+  for (let j=i;j>=0;j--) if (steps[j].st === 0){ const m = steps[j].title.match(/^GET (\S+)/); return decodeHTML(m[1]).split('?')[0]; }
+  return '/';
+}
+function decodeHTML(s){ const t = document.createElement('textarea'); t.innerHTML = s; return t.value; }
+function prepare(){
+  stop();
+  steps = buildSteps($('url').value, $('forget').checked, false);
+  $('steplist').innerHTML = steps.map((s, i) => `<button type="button" data-i="${i}">${i+1}. ${s.head.split(' · ')[1]}</button>`).join('');
+  cur = -1; drawRoutes(null);
+}
+function stop(){ if (playing){ clearTimeout(playing); playing = null; } }
+function play(){
+  prepare(); let i = 0;
+  const tick = () => { show(i); i++; if (i < steps.length) playing = setTimeout(tick, 1400); else playing = null; };
+  tick();
+}
+$('send').addEventListener('click', play);
+$('next').addEventListener('click', () => { stop(); if (cur < 0 || !steps.length) prepare(); if (cur < steps.length - 1) show(cur + 1); });
+$('reset').addEventListener('click', () => { stop(); steps = []; cur = -1; $('steplist').innerHTML = ''; $('stephead').textContent = 'Ready'; $('steptitle').textContent = 'Pick a URL and press "Send request"'; $('stepexplain').textContent = 'Every page in a Flask app is the result of this same short journey.'; $('stepbody').innerHTML = ''; setStations(); $('packet').setAttribute('cx', 90); showBrowser(null); $('view').innerHTML = '<p style="color:#6B7280;font-family:var(--sans)">Nothing loaded yet.</p>'; drawRoutes(null); $('next').disabled = false; });
+$('steplist').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ stop(); show(+b.dataset.i); } });
+$('chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b){ $('url').value = b.dataset.u; play(); } });
+$('url').addEventListener('keydown', e => { if (e.key === 'Enter') play(); });
+$('url').addEventListener('input', () => { stop(); steps = []; cur = -1; });
+$('forget').addEventListener('change', () => { if (steps.length) play(); });
+$('view').addEventListener('click', e => { const a = e.target.closest('[data-go]'); if (a){ e.preventDefault(); $('url').value = a.dataset.go; play(); } });
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  appKey = b.dataset.app;
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  drawChips(); drawRoutes(null); $('url').value = '/' + A().listName; $('reset').click();
+}));
+drawChips(); drawRoutes(null);
+// expose for tests
+window.__lifecycle = {buildSteps, route, setApp: k => { appKey = k; }};
+</script>
+
+</body>
+</html>

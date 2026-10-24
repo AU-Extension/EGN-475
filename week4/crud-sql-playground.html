@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRUD SQL Playground</title>
+<meta name="description" content="EGN 475 Week 4 interactive: add, list, edit, filter and delete rows and see the exact parameterized SQL your Flask app would run.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .grid>*{min-width:0}
+  .seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;max-width:100%}
+  .seg button{font:inherit;font-size:14px;font-weight:600;border:0;background:#fff;padding:8px 14px;cursor:pointer;color:var(--ink-2);flex:1 1 auto}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .tabs button{font:inherit;font-size:14px;font-weight:600;border:0;background:none;padding:8px 12px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
+  .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--au-red)}
+  .form{display:grid;gap:10px}
+  @media(min-width:560px){.form.cols{grid-template-columns:1fr 1fr}}
+  .form label{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--ink-2)}
+  .form .chk{display:flex;gap:8px;align-items:center;font-weight:500}
+  .form .full{grid-column:1/-1}
+  .hint{font-size:13px;color:var(--muted);font-weight:400}
+  .tbl td,.tbl th{white-space:nowrap}
+  .tbl td.num{font-family:var(--mono);text-align:right}
+  .tbl tr.flash td{background:#FEF3C7}
+  .tbl tr.match td{background:var(--ok-soft)}
+  .tbl tr.dim td{opacity:.35}
+  .tbl .acts{display:flex;gap:4px}
+  .tbl .acts button{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:2px 7px;cursor:pointer}
+  .tbl .acts button:hover{border-color:var(--au-red)}
+  .yes{color:var(--ok);font-weight:600}.no{color:var(--muted)}
+  .sql{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.6;border-radius:10px;padding:12px 14px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+  .sql .kw{color:#F9A8D4}.sql .ph{background:#FDE68A;color:#111;border-radius:3px;padding:0 3px;font-weight:600}.sql .str{color:#86EFAC}.sql .cm{color:#94A3B8}.sql .bad{background:#7F1D1D;color:#FECACA;border-radius:3px;padding:0 2px}
+  .lbl{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
+  .log{list-style:none;padding:0;margin:0;font-family:var(--mono);font-size:12px}
+  .log li{border-bottom:1px solid var(--line);padding:5px 0;overflow-wrap:anywhere}
+  .switch{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#FAFAFB}
+  .switch input{width:18px;height:18px}
+  .danger{background:var(--bad-soft);border-color:#F5C2C2}
+  .tryrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .tryrow button{font:inherit;font-family:var(--mono);font-size:12px;border:1px dashed #CBD2DA;background:#fff;border-radius:6px;padding:3px 8px;cursor:pointer}
+  .switch>span{flex:1 1 200px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 4 · Interactive A</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 4 · Explorer</span>
+    <h1>CRUD SQL playground</h1>
+    <p class="lede">Every button in your prototype runs one SQL statement. Here you can create, read, update, and delete rows in a practice table and see the exact <code>db.execute()</code> call, with <code>?</code> placeholders and parameters, that your Flask view would send to SQLite. Then try the unsafe version and watch a SQL injection happen.</p>
+  </section>
+
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol>
+      <li>Pick your table: <code>menu_items</code> for the café or <code>services</code> for the salon.</li>
+      <li>Use the tabs to add a row, filter the list, edit a row, or delete one. The row buttons in the table work too.</li>
+      <li>After every action, read the statement panel: the SQL, the parameters, and what SQLite did.</li>
+      <li>Open the "Search and injection" tab, switch to the unsafe f-string version, and try the example inputs.</li>
+      <li>Press "Reset table" whenever you want the starting data back. Nothing here touches a real database.</li>
+    </ol>
+  </details>
+
+  <div style="margin:0 0 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between">
+    <div class="seg" role="group" aria-label="Choose your table">
+      <button type="button" data-app="cafe" aria-pressed="true">Option A: menu_items</button>
+      <button type="button" data-app="salon" aria-pressed="false">Option B: services</button>
+    </div>
+    <button class="btn" id="reset" type="button">Reset table</button>
+  </div>
+
+  <div class="grid two">
+    <div class="grid" style="align-content:start">
+      <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">
+          <h2 id="tname">menu_items</h2><span class="pill" id="tcount">5 rows</span>
+        </div>
+        <div class="scroll-x"><table class="data tbl" id="tbl"></table></div>
+        <p class="hint" style="margin-top:8px" id="tnote">Prices are stored as whole cents (350 means $3.50) so money never suffers from decimal rounding errors.</p>
+      </section>
+
+      <section class="card">
+        <div class="tabs" role="tablist" id="tabs">
+          <button role="tab" aria-selected="true" data-tab="create">Create</button>
+          <button role="tab" aria-selected="false" data-tab="read">Read and filter</button>
+          <button role="tab" aria-selected="false" data-tab="update">Update</button>
+          <button role="tab" aria-selected="false" data-tab="delete">Delete</button>
+          <button role="tab" aria-selected="false" data-tab="search">Search and injection</button>
+        </div>
+
+        <div data-panel="create">
+          <form class="form cols" id="fCreate">
+            <label>Name <input type="text" name="name" required></label>
+            <label id="c2lbl">Category <select name="f2"></select></label>
+            <label>Price in dollars <input type="text" name="price" inputmode="decimal" placeholder="3.50"><span class="hint">Converted to cents before saving</span></label>
+            <label class="chk"><input type="checkbox" name="flag" checked> <span id="c4lbl">Available</span></label>
+            <div class="full"><button class="btn primary" type="submit">INSERT the row</button></div>
+          </form>
+        </div>
+
+        <div data-panel="read" hidden>
+          <div class="form cols">
+            <label id="r2lbl">Category <select id="rF2"></select></label>
+            <label>Maximum price in dollars <input type="text" id="rMax" inputmode="decimal" placeholder="no limit"></label>
+            <label class="chk"><input type="checkbox" id="rFlag"> <span id="r4lbl">Available items only</span></label>
+            <div class="full" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="rRun" type="button">SELECT with these filters</button><button class="btn" id="rAll" type="button">SELECT every row</button></div>
+          </div>
+        </div>
+
+        <div data-panel="update" hidden>
+          <form class="form cols" id="fUpdate">
+            <label class="full">Row to edit <select name="id" id="uId"></select></label>
+            <label>Name <input type="text" name="name"></label>
+            <label id="u2lbl">Category <select name="f2"></select></label>
+            <label>Price in dollars <input type="text" name="price" inputmode="decimal"></label>
+            <label class="chk"><input type="checkbox" name="flag"> <span id="u4lbl">Available</span></label>
+            <div class="full"><button class="btn primary" type="submit">UPDATE the row</button></div>
+          </form>
+          <p class="hint">Tip: the Edit button in any table row loads it here.</p>
+        </div>
+
+        <div data-panel="delete" hidden>
+          <p style="margin-top:0">Use the Delete button on any row of the table. Your app should only delete with a POST request from a form, never from a plain link.</p>
+          <div class="switch danger">
+            <span style="flex:1 1 240px"><b>What if Copilot forgets the WHERE clause?</b> Run the statement without it and see what happens.</span>
+            <button class="btn" id="dAll" type="button">Run DELETE without WHERE</button>
+          </div>
+        </div>
+
+        <div data-panel="search" hidden>
+          <label class="switch" for="unsafe"><input type="checkbox" id="unsafe"> <span><b>Unsafe mode:</b> build the SQL with a Python f-string instead of a <code>?</code> placeholder</span></label>
+          <div class="form" style="margin-top:10px">
+            <label>Search by exact name <input type="text" id="sName" spellcheck="false" autocomplete="off"></label>
+            <div><button class="btn primary" id="sRun" type="button">Run the search</button></div>
+          </div>
+          <div class="lbl">Try these inputs</div>
+          <div class="tryrow" id="tries"></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="grid" style="align-content:start">
+      <section class="card" aria-live="polite">
+        <h2>Last statement</h2>
+        <div class="lbl">Python in your view</div>
+        <div class="sql" id="py">Run an action to see the code.</div>
+        <div class="lbl">SQL that SQLite receives</div>
+        <div class="sql" id="sqlout">-</div>
+        <div id="result"></div>
+      </section>
+      <section class="card">
+        <h2>Statement history</h2>
+        <ul class="log" id="log"><li>No statements yet.</li></ul>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $ = id => document.getElementById(id);
+const SCHEMA = {
+  cafe: {table:'menu_items', f2:'category', f2label:'Category', f2opts:['Drinks','Food','Bakery'], f2num:false, flag:'available', flagLabel:'Available', flagOnly:'Available items only',
+         seed:[[1,'Café con leche','Drinks',350,1],[2,'Cuban sandwich','Food',1100,1],[3,'Guava pastelito','Bakery',225,1],[4,'Croqueta','Food',150,1],[5,'Cortadito','Drinks',275,0]],
+         tries:['Croqueta', "x' OR '1'='1", "x' OR 1=1 --", "Bob's café", "'; DROP TABLE menu_items; --"]},
+  salon:{table:'services', f2:'duration_minutes', f2label:'Duration (minutes)', f2opts:['30','45','60','90','120','150'], f2num:true, flag:'active', flagLabel:'Active', flagOnly:'Active services only',
+         seed:[[1,'Haircut','45',4500,1],[2,'Color','90',9500,1],[3,'Blowout','30',3500,1],[4,'Manicure','45',3000,1],[5,'Keratin treatment','150',25000,0]],
+         tries:['Haircut', "x' OR '1'='1", "x' OR 1=1 --", "Maria's special", "'; DROP TABLE services; --"]}
+};
+let app = 'cafe', rows = [], seq = 5, history = [];
+const S = () => SCHEMA[app];
+const cols = () => ['id','name',S().f2,'price_cents',S().flag];
+const money = c => '$' + (c/100).toFixed(2);
+
+function resetData(){ rows = S().seed.map(r => ({id:r[0], name:r[1], f2: S().f2num ? parseInt(r[2],10) : r[2], price_cents:r[3], flag:r[4]})); seq = 5; }
+function toCents(txt){
+  const t = String(txt).trim().replace(/^\$/,'');
+  if (!/^\d+(\.\d{1,2})?$/.test(t)) return null;
+  return Math.round(parseFloat(t) * 100);
+}
+/* ---------- table ---------- */
+function drawTable(opts){
+  opts = opts || {};
+  const s = S();
+  $('tname').textContent = s.table;
+  $('tcount').textContent = rows.length + (rows.length === 1 ? ' row' : ' rows');
+  const head = '<tr>' + cols().map(c => `<th>${c}</th>`).join('') + '<th>Actions</th></tr>';
+  if (!rows.length){ $('tbl').innerHTML = head + `<tr><td colspan="6" style="color:var(--muted)">The table is empty. Press "Reset table" to restore the sample rows.</td></tr>`; return; }
+  $('tbl').innerHTML = head + rows.map(r => {
+    let cls = '';
+    if (opts.flash && opts.flash.includes(r.id)) cls = 'flash';
+    if (opts.matched){ cls = opts.matched.includes(r.id) ? 'match' : 'dim'; }
+    return `<tr class="${cls}" data-id="${r.id}"><td class="num">${r.id}</td><td>${esc(r.name)}</td><td${s.f2num ? ' class="num"' : ''}>${esc(r.f2)}</td><td class="num" title="${money(r.price_cents)}">${r.price_cents}</td><td class="${r.flag ? 'yes' : 'no'}">${r.flag}</td>` +
+      `<td><div class="acts"><button type="button" data-act="edit">Edit</button><button type="button" data-act="toggle" title="Toggle ${s.flag}">Toggle</button><button type="button" data-act="del">Delete</button></div></td></tr>`;
+  }).join('');
+  if (hasGSAP && opts.flash) gsap.fromTo('#tbl tr.flash td', {backgroundColor:'#FDE68A'}, {backgroundColor:'#FFFFFF', duration:1.6, delay:0.2, clearProps:'backgroundColor'});
+}
+/* ---------- statement panel ---------- */
+function pyLiteral(v){ return typeof v === 'number' ? String(v) : JSON.stringify(v).replace(/^"|"$/g, '"'); }
+function pyTuple(params){ if (!params.length) return '()'; if (params.length === 1) return `(${pyLiteral(params[0])},)`; return '(' + params.map(pyLiteral).join(', ') + ')'; }
+function hiSQL(sql){
+  return esc(sql).replace(/\?/g, '<span class="ph">?</span>')
+    .replace(/\b(SELECT|INSERT INTO|VALUES|UPDATE|SET|DELETE FROM|FROM|WHERE|AND|OR|ORDER BY|DROP TABLE)\b/g, '<span class="kw">$1</span>')
+    .replace(/(--.*)$/m, '<span class="cm">$1</span>');
+}
+function show(o){
+  // o: {sql, params, write, fetch, resultHTML, ok, pyOverride}
+  const tupleTxt = pyTuple(o.params || []);
+  let py;
+  if (o.pyOverride) py = o.pyOverride;
+  else {
+    const call = o.params && o.params.length ? `db.execute(\n    "${o.sql}",\n    ${tupleTxt},\n)` : `db.execute("${o.sql}")`;
+    py = (o.fetch ? 'rows = ' : '') + call + (o.fetch ? '.fetchall()' : '') + (o.write ? '\ndb.commit()' : '');
+  }
+  $('py').innerHTML = hiSQL(py).replace(/^(rows|db)/gm, '$1');
+  $('sqlout').innerHTML = o.sentHTML || hiSQL(o.sql) + (o.params && o.params.length ? `\n<span class="cm">-- parameters sent separately: ${esc(tupleTxt)}</span>` : '');
+  $('result').innerHTML = `<div class="feedback ${o.ok === false ? 'bad' : o.warn ? 'info' : 'ok'}">${o.resultHTML}</div>`;
+  history.unshift(o.sql.split('\n')[0]); history = history.slice(0, 8);
+  $('log').innerHTML = history.map(h => `<li>${esc(h)}</li>`).join('');
+  if (hasGSAP) gsap.from('#result .feedback', {opacity:0, y:6, duration:0.3});
+}
+/* ---------- CRUD actions ---------- */
+function doInsert(name, f2, cents, flag){
+  const s = S();
+  const id = ++seq;
+  const sql = `INSERT INTO ${s.table} (name, ${s.f2}, price_cents, ${s.flag}) VALUES (?, ?, ?, ?)`;
+  const params = [name, s.f2num ? parseInt(f2,10) : f2, cents, flag ? 1 : 0];
+  rows.push({id, name, f2: params[1], price_cents:cents, flag: params[3]});
+  drawTable({flash:[id]});
+  show({sql, params, write:true, resultHTML:`1 row inserted. SQLite chose <code>id = ${id}</code> by itself because the column is <code>INTEGER PRIMARY KEY AUTOINCREMENT</code>. Without <code>db.commit()</code> the row would disappear when the request ends.`});
+}
+function doSelect(filters){
+  const s = S();
+  const conds = [], params = [];
+  if (filters){
+    if (filters.f2){ conds.push(s.f2num ? `${s.f2} <= ?` : `${s.f2} = ?`); params.push(s.f2num ? parseInt(filters.f2,10) : filters.f2); }
+    if (filters.max != null){ conds.push('price_cents <= ?'); params.push(filters.max); }
+    if (filters.flag){ conds.push(`${s.flag} = 1`); }
+  }
+  const sql = `SELECT ${cols().join(', ')} FROM ${s.table}` + (conds.length ? ' WHERE ' + conds.join(' AND ') : '') + (filters ? ' ORDER BY name' : ' ORDER BY id');
+  let res = rows.filter(r => {
+    if (!filters) return true;
+    if (filters.f2 && (s.f2num ? r.f2 > parseInt(filters.f2,10) : r.f2 !== filters.f2)) return false;
+    if (filters.max != null && r.price_cents > filters.max) return false;
+    if (filters.flag && r.flag !== 1) return false;
+    return true;
+  });
+  if (filters) res = res.slice().sort((a,b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  drawTable({matched: res.map(r => r.id)});
+  show({sql, params, fetch:true, resultHTML:`${res.length} row${res.length === 1 ? '' : 's'} returned${res.length ? ': ' + res.map(r => esc(r.name)).join(', ') : ''}. Reading data never needs <code>db.commit()</code>. In your view you pass <code>rows</code> to <code>render_template()</code> and loop over it in Jinja.` + (params.length === 1 ? ' Notice the trailing comma in <code>(x,)</code>: a tuple with one value needs it.' : '')});
+}
+function doUpdate(id, name, f2, cents, flag){
+  const s = S(); const r = rows.find(x => x.id === id); if (!r) return;
+  r.name = name; r.f2 = s.f2num ? parseInt(f2,10) : f2; r.price_cents = cents; r.flag = flag ? 1 : 0;
+  const sql = `UPDATE ${s.table} SET name = ?, ${s.f2} = ?, price_cents = ?, ${s.flag} = ? WHERE id = ?`;
+  drawTable({flash:[id]});
+  show({sql, params:[name, r.f2, cents, r.flag, id], write:true, resultHTML:`1 row updated. The <code>WHERE id = ?</code> part decides which row changes, and its value is always the last parameter.`});
+}
+function doToggle(id){
+  const s = S(); const r = rows.find(x => x.id === id); r.flag = r.flag ? 0 : 1;
+  drawTable({flash:[id]});
+  show({sql:`UPDATE ${s.table} SET ${s.flag} = ? WHERE id = ?`, params:[r.flag, id], write:true, resultHTML:`1 row updated: <b>${esc(r.name)}</b> now has <code>${s.flag} = ${r.flag}</code>. SQLite has no true/false type, so 1 and 0 are used.`});
+}
+function doDelete(id){
+  const s = S(); const r = rows.find(x => x.id === id); rows = rows.filter(x => x.id !== id);
+  drawTable();
+  show({sql:`DELETE FROM ${s.table} WHERE id = ?`, params:[id], write:true, resultHTML:`1 row deleted (<b>${esc(r.name)}</b>). With AUTOINCREMENT, id ${id} will never be reused, so old links to it simply show 404. In your app, ask "Are you sure?" before deleting.`});
+}
+function doDeleteAll(){
+  const s = S(); const n = rows.length; rows = [];
+  drawTable();
+  show({sql:`DELETE FROM ${s.table}`, params:[], write:true, ok:false, resultHTML:`${n} rows deleted. Every single one. SQLite did exactly what it was told, without any warning. Read every <code>UPDATE</code> and <code>DELETE</code> Copilot suggests and check for the <code>WHERE</code> clause. Press "Reset table" to bring the data back.`});
+}
+/* ---------- search: safe vs unsafe (simulated SQLite behavior) ---------- */
+function unsafeEval(input){
+  // Query: SELECT ... WHERE name = '<input>'
+  const tail = "'" + input + "'";
+  // 1) read the first string literal ('' is an escaped quote)
+  let i = 1, lit = '';
+  while (i < tail.length){
+    if (tail[i] === "'"){ if (tail[i+1] === "'"){ lit += "'"; i += 2; continue; } break; }
+    lit += tail[i]; i++;
+  }
+  let rest = tail.slice(i + 1);  // text after the closing quote
+  if (!rest.trim()) return {kind:'eq', value:lit};
+  // statements after a semicolon (outside strings) are refused by Python's sqlite3 execute()
+  const beforeComment = rest.split('--')[0];
+  if (/;\s*\S/.test(beforeComment) || /;\s*\S/.test(rest.replace(/--[^\n]*$/, ''))) return {kind:'error', type:'sqlite3.ProgrammingError', msg:'You can only execute one statement at a time.'};
+  const code = rest.replace(/--.*$/, '').trim();
+  if (!code) return {kind:'eq', value:lit};
+  const m = code.match(/^OR\s+('?)([\w]+)\1\s*=\s*('?)([\w]+)'?$/i);
+  if (m) return m[2] === m[4] ? {kind:'all', value:lit} : {kind:'eq', value:lit};
+  const tok = (code.match(/^[A-Za-z_]\w*|^\S/) || ['?'])[0];
+  return {kind:'error', type:'sqlite3.OperationalError', msg:`near "${tok}": syntax error`};
+}
+function doSearch(){
+  const s = S(), name = $('sName').value;
+  const sel = `SELECT ${cols().join(', ')} FROM ${s.table}`;
+  if (!$('unsafe').checked){
+    const res = rows.filter(r => r.name === name);
+    drawTable({matched: res.map(r => r.id)});
+    show({sql:`${sel} WHERE name = ?`, params:[name], fetch:true, resultHTML:`${res.length} row${res.length === 1 ? '' : 's'} returned. The input was sent as data, separate from the SQL, so quotes and keywords in it are just characters to compare. This is the only way your prototype should build queries.`});
+    return;
+  }
+  const sentRaw = `${sel} WHERE name = '${name}'`;
+  const py = `rows = db.execute(\n    f"${sel} WHERE name = '{name}'"\n).fetchall()   # UNSAFE`;
+  const r = unsafeEval(name);
+  const sentHTML = hiSQL(`${sel} WHERE name = `) + `<span class="bad">${esc("'" + name + "'")}</span>`;
+  if (r.kind === 'eq'){
+    const res = rows.filter(x => x.name === r.value);
+    drawTable({matched: res.map(x => x.id)});
+    show({sql:sentRaw, sentHTML, pyOverride:py, warn:true, resultHTML:`${res.length} row${res.length === 1 ? '' : 's'} returned. It worked this time, but only because the input had no quote in it. The user's text became part of the SQL itself.`});
+  } else if (r.kind === 'all'){
+    drawTable({matched: rows.map(x => x.id)});
+    show({sql:sentRaw, sentHTML, pyOverride:py, ok:false, resultHTML:`<b>SQL injection.</b> ${rows.length} rows returned, every row in the table. The quote in the input closed the string early, and <code>OR ...=...</code> made the condition true for every row. On a login form this trick can skip the password check.`});
+  } else {
+    drawTable({matched: []});
+    show({sql:sentRaw, sentHTML, pyOverride:py, ok:false, resultHTML:`<b>${r.type}: ${esc(r.msg)}</b><br>` + (r.type.endsWith('ProgrammingError') ? 'Python\'s sqlite3 refuses to run two statements in one <code>execute()</code>, which stopped this attack, but the query is still broken and the next trick (like <code>OR 1=1</code>) still works.' : 'A normal name with an apostrophe crashes the page with a 500 error. Your real customers have names like that. The <code>?</code> placeholder version handles it with no trouble.')});
+  }
+}
+/* ---------- wiring ---------- */
+function fillSelects(){
+  const s = S();
+  const opts = s.f2opts.map(o => `<option>${o}</option>`).join('');
+  document.querySelector('#fCreate [name=f2]').innerHTML = opts;
+  document.querySelector('#fUpdate [name=f2]').innerHTML = opts;
+  $('rF2').innerHTML = `<option value="">${s.f2num ? 'Any duration' : 'All categories'}</option>` + (s.f2num ? s.f2opts.map(o => `<option value="${o}">${o} minutes or less</option>`).join('') : opts);
+  ['c2lbl','r2lbl','u2lbl'].forEach(id => $(id).firstChild.textContent = (id === 'r2lbl' && s.f2num ? 'Maximum duration' : s.f2label) + ' ');
+  $('c4lbl').textContent = s.flagLabel; $('u4lbl').textContent = s.flagLabel; $('r4lbl').textContent = s.flagOnly;
+  $('tries').innerHTML = s.tries.map(t => `<button type="button" data-t="${esc(t)}">${esc(t)}</button>`).join('');
+  $('tnote').textContent = s.f2num ? 'Prices are stored as whole cents (4500 means $45.00) and durations as whole minutes, so the numbers can be compared and summed exactly.' : 'Prices are stored as whole cents (350 means $3.50) so money never suffers from decimal rounding errors.';
+}
+function fillUpdate(id){
+  $('uId').innerHTML = rows.map(r => `<option value="${r.id}">${r.id}: ${esc(r.name)}</option>`).join('');
+  const r = rows.find(x => x.id === id) || rows[0]; if (!r) return;
+  $('uId').value = r.id;
+  const f = $('fUpdate'); f.name.value = r.name; f.f2.value = String(r.f2); f.price.value = (r.price_cents/100).toFixed(2); f.flag.checked = !!r.flag;
+}
+function tab(name){
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'));
+  document.querySelectorAll('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== name);
+  if (name === 'update') fillUpdate(+$('uId').value || (rows[0] && rows[0].id));
+}
+function err(msg){ $('result').innerHTML = `<div class="feedback bad"><b>Validation error:</b> ${msg}</div>`; }
+$('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) tab(b.dataset.tab); });
+$('fCreate').addEventListener('submit', e => {
+  e.preventDefault(); const f = e.target;
+  const name = f.name.value.trim(), cents = toCents(f.price.value);
+  if (!name) return err('Name is required. Your Flask view should check this before running any SQL.');
+  if (cents === null || cents <= 0) return err('Enter a price like 3.50. Validate input on the server before it reaches the database.');
+  doInsert(name, f.f2.value, cents, f.flag.checked); f.name.value = ''; f.price.value = '';
+});
+$('rRun').addEventListener('click', () => {
+  const maxTxt = $('rMax').value.trim(); let max = null;
+  if (maxTxt){ max = toCents(maxTxt); if (max === null) return err('Maximum price must look like 5 or 5.00.'); }
+  doSelect({f2: $('rF2').value, max, flag: $('rFlag').checked});
+});
+$('rAll').addEventListener('click', () => doSelect(null));
+$('uId').addEventListener('change', () => fillUpdate(+$('uId').value));
+$('fUpdate').addEventListener('submit', e => {
+  e.preventDefault(); const f = e.target; if (!rows.length) return err('There are no rows to update.');
+  const name = f.name.value.trim(), cents = toCents(f.price.value);
+  if (!name) return err('Name cannot be empty.');
+  if (cents === null || cents <= 0) return err('Enter a price like 3.50.');
+  doUpdate(+$('uId').value, name, f.f2.value, cents, f.flag.checked);
+});
+$('dAll').addEventListener('click', doDeleteAll);
+$('sRun').addEventListener('click', doSearch);
+$('sName').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+$('tries').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ $('sName').value = b.dataset.t; doSearch(); } });
+$('unsafe').addEventListener('change', () => { if ($('sName').value) doSearch(); });
+$('tbl').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = +b.closest('tr').dataset.id;
+  if (b.dataset.act === 'edit'){ tab('update'); fillUpdate(id); $('fUpdate').name.focus(); }
+  else if (b.dataset.act === 'toggle') doToggle(id);
+  else doDelete(id);
+});
+$('reset').addEventListener('click', () => { resetData(); drawTable(); $('result').innerHTML = '<div class="feedback info">Table reset to the sample rows.</div>'; });
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  app = b.dataset.app;
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  resetData(); fillSelects(); drawTable(); history = []; $('rMax').value = ''; $('rFlag').checked = false; $('sName').value = ''; $('log').innerHTML = '<li>No statements yet.</li>'; $('py').textContent = 'Run an action to see the code.'; $('sqlout').textContent = '-'; $('result').innerHTML = '';
+}));
+resetData(); fillSelects(); drawTable();
+window.__crud = {unsafeEval, toCents, pyTuple};
+</script>
+
+</body>
+</html>
