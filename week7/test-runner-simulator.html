@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test Runner Simulator</title>
+<meta name="description" content="EGN 475 Week 7 interactive: run a pytest suite, switch on bugs, and add the edge-case tests Copilot missed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .opt{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+  .opt .btn[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .layout{display:grid;gap:16px}
+  .layout>*{min-width:0}
+  @media(min-width:980px){.layout{grid-template-columns:1.05fr 1fr}}
+  .code{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:12.5px;line-height:1.55;border-radius:10px;padding:12px 0;overflow:auto}
+  .code .ln{display:block;white-space:pre;padding:0 14px;min-height:1.55em}
+  .code .ln.bug{background:rgba(225,20,30,.28);color:#FFE3E3}
+  .code .ln .tag{float:right;font-size:11px;color:#FCA5A5;margin-left:12px}
+  .bugs{display:grid;gap:8px;margin:12px 0 0}
+  .bugrow{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;background:#fff}
+  .bugrow input{margin-top:4px;accent-color:var(--au-red)}
+  .bugrow b{font-family:var(--mono);font-size:13px;color:var(--au-red-dark)}
+  .bugrow.on{border-color:#F5A3A3;background:var(--bad-soft)}
+  .tests{display:grid;gap:8px}
+  .trow{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
+  .trow input{margin-top:4px;accent-color:var(--net-green)}
+  .trow code{font-size:13px;word-break:break-word}
+  .trow .src{font-size:12px;color:var(--muted)}
+  .trow.draft{background:#F8FAFC}
+  .trow.sel{border-color:#9AD3AE;background:var(--ok-soft)}
+  .trow details{margin-top:4px;font-size:13px;color:var(--ink-2)}
+  .trow details pre{background:#EEF1F5;border-radius:6px;padding:8px;font-size:12px;overflow:auto;margin:6px 0 0}
+  .run{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 10px}
+  .cli .g{color:#4ADE80}.cli .r{color:#F87171}.cli .y{color:#FACC15}.cli .b{font-weight:600}
+  .meter{height:12px;border-radius:999px;background:#EEF1F5;overflow:hidden;margin:6px 0 4px}
+  .meter > div{height:100%;width:0;background:linear-gradient(90deg,var(--net-green),#22C55E);border-radius:999px;transition:width .4s}
+  .chip{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px}
+  .chip.ok{background:var(--ok-soft);color:#14532D}.chip.no{background:var(--bad-soft);color:#7F1D1D}
+  .matrix td:first-child{font-family:var(--mono);font-weight:600;color:var(--au-red-dark)}
+
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 7 · Interactive A</div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 7 · Explorer</span>
+    <h1>Test runner simulator</h1>
+    <p class="lede">Copilot is good at drafting tests for the happy path. This simulator shows what those tests miss: switch on realistic bugs, run the suite, and add the edge-case tests that catch them.</p>
+  </section>
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol><li>Choose your option: café order board or appointment booker.</li><li>Press <b>Run pytest</b> with no bugs switched on. The Copilot draft suite passes.</li><li>Switch on one or more bugs in the code panel and run again. Notice how many bugs the draft suite lets through.</li><li>Add tests from the list of edge cases until your suite catches all six bugs. Try to do it without adding tests that catch nothing new.</li><li>Read the failure output for each red test. It has the same layout you will see in VS Code when you run pytest.</li></ol>
+  </details>
+
+  <div class="opt" role="group" aria-label="Choose your option">
+    <button class="btn" data-opt="A" aria-pressed="true">Option A · Café order board</button>
+    <button class="btn" data-opt="B" aria-pressed="false">Option B · Appointment booker</button>
+  </div>
+  <div class="layout">
+    <section class="card">
+      <h2>The code under test</h2>
+      <p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">Part of <code id="appfile">app.py</code>. Switch on a bug and the changed line turns red. Each bug is a mistake an AI assistant can easily suggest.</p>
+      <div class="code" id="code" aria-label="Python code"></div>
+      <h3 style="margin-top:16px">Bugs to switch on</h3>
+      <div class="bugs" id="bugs"></div>
+    </section>
+    <section class="card">
+      <h2>Your test suite</h2>
+      <p style="margin:0 0 6px;font-size:14px;color:var(--ink-2)">Bugs your suite can catch</p>
+      <div class="meter" aria-hidden="true"><div id="meter"></div></div>
+      <p id="meterText" style="margin:0 0 12px;font-weight:600"></p>
+      <div class="tests" id="tests"></div>
+      <div class="run">
+        <button class="btn primary" id="runBtn">Run pytest</button>
+        <button class="btn" id="resetBtn">Reset</button>
+        <span class="pill" id="cmd">python -m pytest</span>
+      </div>
+    </section>
+  </div>
+  <section class="card" style="margin-top:16px">
+    <h2>Terminal output</h2>
+    <div class="cli" id="out" aria-live="polite">Press "Run pytest" to run your suite.</div>
+    <div id="explain"></div>
+  </section>
+  <section class="card" style="margin-top:16px">
+    <h2>Which test catches which bug?</h2>
+    <p style="margin:0 0 8px;font-size:14px;color:var(--ink-2)">This table only counts the tests you have selected. A bug with no catching test can reach your users without any warning.</p>
+    <div class="scroll-x"><table class="data matrix" id="matrix"></table></div>
+  </section>
+
+</main>
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+
+const DATA = {
+ A: {
+  file: 'app.py', testfile: 'tests\\test_orders.py', nodefile: 'tests/test_orders.py', root: 'C:\\Users\\student\\egn475-cafe-perez',
+  code: [
+   {t:'@app.post("/orders/new")'},
+   {t:'@login_required'},
+   {t:'def create_order():'},
+   {t:'    name = request.form.get("customer_name", "").strip()'},
+   {t:'    item_id = request.form.get("menu_item_id", type=int)'},
+   {t:'    quantity = request.form.get("quantity", type=int)'},
+   {t:'    error = None'},
+   {t:'    if not name:', bug:'B2', b:'    if name is None:'},
+   {t:'        error = "Name is required."'},
+   {t:'    elif quantity is None or quantity < 1:', bug:'B1', b:'    elif quantity is None or quantity < 0:'},
+   {t:'        error = "Quantity must be at least 1."'},
+   {t:'    elif not item_is_available(item_id):', bug:'B6', b:'    elif item_id is None:'},
+   {t:'        error = "That item is not available."'},
+   {t:'    if error:'},
+   {t:'        flash(error)'},
+   {t:'        return render_template("orders/new.html"), 400'},
+   {t:'    save_order(name, item_id, quantity)'},
+   {t:'    return redirect(url_for("order_list"))', bug:'B5', b:'    return render_template("orders/list.html")'},
+   {t:''},
+   {t:'@app.get("/kitchen")'},
+   {t:'@login_required'},
+   {t:'@staff_required', bug:'B3', b:'# @staff_required'},
+   {t:'def kitchen_board():'},
+   {t:'    return render_template("kitchen.html", orders=open_orders())'},
+   {t:''},
+   {t:'NEXT = {"received": "preparing", "preparing": "ready", "ready": "picked up"}'},
+   {t:'STATUSES = ["received", "preparing", "ready", "picked up"]'},
+   {t:''},
+   {t:'def can_move(old, new):'},
+   {t:'    return NEXT.get(old) == new', bug:'B4', b:'    return new in STATUSES'},
+  ],
+  bugs: {
+   B1:'Quantity check uses < 0, so an order for 0 coffees is accepted.',
+   B2:'Name check tests for None. An empty name "" is not None, so it slips through.',
+   B3:'The @staff_required line is commented out, so any customer can open the kitchen board.',
+   B4:'can_move() accepts any known status, so an order can jump from ready back to received.',
+   B5:'After saving, the route renders a page instead of redirecting (breaks post/redirect/get).',
+   B6:'Only checks that an item id was sent, not that the item is available (sold out items can be ordered).'
+  },
+  tests: [
+   {id:'test_menu_page_loads', draft:true, catches:[], kind:'page',
+    code:['def test_menu_page_loads(client):','    response = client.get("/")','    assert response.status_code == 200'],
+    why:'A smoke test: the home page opens. Worth keeping, but it does not check any business rule.'},
+   {id:'test_create_order_valid', draft:true, catches:[], kind:'count',
+    code:['def test_create_order_valid(client):','    login(client, "ana")','    client.post("/orders/new", data=VALID_ORDER)','    assert count_orders() == 1'],
+    why:'Checks that a correct order is saved. This is the happy path that Copilot almost always drafts first.'},
+   {id:'test_create_order_redirects', draft:true, catches:['B5'], kind:'redirect',
+    code:['def test_create_order_redirects(client):','    login(client, "ana")','    response = client.post("/orders/new", data=VALID_ORDER)','    assert response.status_code == 302','    assert response.headers["Location"] == "/orders"'],
+    why:'Checks the post/redirect/get pattern: after saving, the browser is sent to the order list.'},
+   {id:'test_empty_name_rejected', catches:['B2'], kind:'reject',
+    code:['def test_empty_name_rejected(client):','    login(client, "ana")','    bad = {**VALID_ORDER, "customer_name": "   "}','    response = client.post("/orders/new", data=bad)','    assert response.status_code == 400'],
+    why:'A name made of spaces becomes "" after strip(). Copilot tested a real name, never a blank one.'},
+   {id:'test_quantity_zero_rejected', catches:['B1'], kind:'reject',
+    code:['def test_quantity_zero_rejected(client):','    login(client, "ana")','    bad = {**VALID_ORDER, "quantity": "0"}','    response = client.post("/orders/new", data=bad)','    assert response.status_code == 400'],
+    why:'Zero sits exactly on the boundary. Boundary values are where off-by-one bugs hide.'},
+   {id:'test_negative_quantity_rejected', catches:[], kind:'reject',
+    code:['def test_negative_quantity_rejected(client):','    login(client, "ana")','    bad = {**VALID_ORDER, "quantity": "-2"}','    response = client.post("/orders/new", data=bad)','    assert response.status_code == 400'],
+    why:'Good practice, but with these bugs it catches nothing new: even the buggy check (< 0) rejects -2. Only the boundary value 0 exposes bug B1.'},
+   {id:'test_unavailable_item_rejected', catches:['B6'], kind:'reject',
+    code:['def test_unavailable_item_rejected(client):','    login(client, "ana")','    bad = {**VALID_ORDER, "menu_item_id": SOLD_OUT_ID}','    response = client.post("/orders/new", data=bad)','    assert response.status_code == 400'],
+    why:'Uses a seed item marked available = 0. The draft tests only ever ordered items that were in stock.'},
+   {id:'test_customer_cannot_open_kitchen_board', catches:['B3'], kind:'forbid',
+    code:['def test_customer_cannot_open_kitchen_board(client):','    login(client, "ana")','    response = client.get("/kitchen")','    assert response.status_code == 403'],
+    why:'Role tests log in as the wrong role on purpose. Copilot usually tests pages as the user who is allowed in.'},
+   {id:'test_invalid_status_change_rejected', catches:['B4'], kind:'unit',
+    code:['def test_invalid_status_change_rejected():','    assert can_move("ready", "received") is False'],
+    why:'A unit test calls the function directly, no client needed. It checks the status workflow cannot run backward.'},
+   {id:'test_menu_page_shows_title', catches:[], kind:'page',
+    code:['def test_menu_page_shows_title(client):','    response = client.get("/")','    assert b"Caf" in response.data'],
+    why:'Almost the same as test_menu_page_loads. Extra tests that check the same thing add run time but no protection.'}
+  ],
+  unit: ['ready','received']
+ },
+ B: {
+  file: 'app.py', testfile: 'tests\\test_appointments.py', nodefile: 'tests/test_appointments.py', root: 'C:\\Users\\student\\egn475-salon-garcia',
+  code: [
+   {t:'@app.post("/appointments/new")'},
+   {t:'@login_required'},
+   {t:'def book_appointment():'},
+   {t:'    name = request.form.get("client_name", "").strip()'},
+   {t:'    service_id = request.form.get("service_id", type=int)'},
+   {t:'    day = request.form.get("date", "")'},
+   {t:'    slot = request.form.get("time", "")'},
+   {t:'    error = None'},
+   {t:'    if not name:', bug:'B2', b:'    if name is None:'},
+   {t:'        error = "Name is required."'},
+   {t:'    elif not day or date.fromisoformat(day) < date.today():', bug:'B1', b:'    elif not day:'},
+   {t:'        error = "Please choose today or a future date."'},
+   {t:'    elif slot_taken(day, slot):', bug:'B6', b:'    elif not slot:'},
+   {t:'        error = "That time is already booked."'},
+   {t:'    if error:'},
+   {t:'        flash(error)'},
+   {t:'        return render_template("appointments/new.html"), 400'},
+   {t:'    save_appointment(name, service_id, day, slot)'},
+   {t:'    return redirect(url_for("my_appointments"))', bug:'B5', b:'    return render_template("appointments/mine.html")'},
+   {t:''},
+   {t:'@app.get("/staff/calendar")'},
+   {t:'@login_required'},
+   {t:'@staff_required', bug:'B3', b:'# @staff_required'},
+   {t:'def staff_calendar():'},
+   {t:'    return render_template("calendar.html", appointments=upcoming())'},
+   {t:''},
+   {t:'NEXT = {"requested": {"confirmed", "canceled"}, "confirmed": {"completed", "canceled"}}'},
+   {t:'STATUSES = ["requested", "confirmed", "completed", "canceled"]'},
+   {t:''},
+   {t:'def can_move(old, new):'},
+   {t:'    return new in NEXT.get(old, set())', bug:'B4', b:'    return new in STATUSES'},
+  ],
+  bugs: {
+   B1:'The past-date check was dropped, so a client can book an appointment for last year.',
+   B2:'Name check tests for None. An empty name "" is not None, so it slips through.',
+   B3:'The @staff_required line is commented out, so any client can open the staff calendar.',
+   B4:'can_move() accepts any known status, so a canceled appointment can become confirmed again.',
+   B5:'After saving, the route renders a page instead of redirecting (breaks post/redirect/get).',
+   B6:'Only checks that a time was chosen, not that the slot is free (double booking).'
+  },
+  tests: [
+   {id:'test_services_page_loads', draft:true, catches:[], kind:'page',
+    code:['def test_services_page_loads(client):','    response = client.get("/")','    assert response.status_code == 200'],
+    why:'A smoke test: the services page opens. Worth keeping, but it does not check any business rule.'},
+   {id:'test_book_valid', draft:true, catches:[], kind:'count',
+    code:['def test_book_valid(client):','    login(client, "luis")','    client.post("/appointments/new", data=VALID_BOOKING)','    assert count_appointments() == 1'],
+    why:'Checks that a correct booking is saved. This is the happy path that Copilot almost always drafts first.'},
+   {id:'test_book_redirects', draft:true, catches:['B5'], kind:'redirect',
+    code:['def test_book_redirects(client):','    login(client, "luis")','    response = client.post("/appointments/new", data=VALID_BOOKING)','    assert response.status_code == 302','    assert response.headers["Location"] == "/appointments"'],
+    why:'Checks the post/redirect/get pattern: after saving, the browser is sent to the appointment list.'},
+   {id:'test_empty_name_rejected', catches:['B2'], kind:'reject',
+    code:['def test_empty_name_rejected(client):','    login(client, "luis")','    bad = {**VALID_BOOKING, "client_name": "   "}','    response = client.post("/appointments/new", data=bad)','    assert response.status_code == 400'],
+    why:'A name made of spaces becomes "" after strip(). Copilot tested a real name, never a blank one.'},
+   {id:'test_past_date_rejected', catches:['B1'], kind:'reject',
+    code:['def test_past_date_rejected(client):','    login(client, "luis")','    bad = {**VALID_BOOKING, "date": "2020-01-15"}','    response = client.post("/appointments/new", data=bad)','    assert response.status_code == 400'],
+    why:'Dates in the past are a classic edge case. The draft tests always used a future date.'},
+   {id:'test_missing_date_rejected', catches:[], kind:'reject',
+    code:['def test_missing_date_rejected(client):','    login(client, "luis")','    bad = {**VALID_BOOKING, "date": ""}','    response = client.post("/appointments/new", data=bad)','    assert response.status_code == 400'],
+    why:'Good practice, but with these bugs it catches nothing new: even the buggy check still rejects an empty date. Only a real past date exposes bug B1.'},
+   {id:'test_double_booking_rejected', catches:['B6'], kind:'reject2',
+    code:['def test_double_booking_rejected(client):','    login(client, "luis")','    client.post("/appointments/new", data=VALID_BOOKING)','    response = client.post("/appointments/new", data=VALID_BOOKING)','    assert response.status_code == 400'],
+    why:'Books the same slot twice. Copilot drafted single bookings only, so a double booking never happened in its tests.'},
+   {id:'test_client_cannot_open_staff_calendar', catches:['B3'], kind:'forbid',
+    code:['def test_client_cannot_open_staff_calendar(client):','    login(client, "luis")','    response = client.get("/staff/calendar")','    assert response.status_code == 403'],
+    why:'Role tests log in as the wrong role on purpose. Copilot usually tests pages as the user who is allowed in.'},
+   {id:'test_invalid_status_change_rejected', catches:['B4'], kind:'unit',
+    code:['def test_invalid_status_change_rejected():','    assert can_move("canceled", "confirmed") is False'],
+    why:'A unit test calls the function directly, no client needed. It checks that a canceled appointment stays canceled.'},
+   {id:'test_services_page_shows_title', catches:[], kind:'page',
+    code:['def test_services_page_shows_title(client):','    response = client.get("/")','    assert b"Bella Vista" in response.data'],
+    why:'Almost the same as test_services_page_loads. Extra tests that check the same thing add run time but no protection.'}
+  ],
+  unit: ['canceled','confirmed']
+ }
+};
+const STATUS_TEXT = {200:'200 OK', 302:'302 FOUND', 400:'400 BAD REQUEST', 403:'403 FORBIDDEN'};
+const BUG_IDS = ['B1','B2','B3','B4','B5','B6'];
+let opt = 'A';
+let bugsOn = new Set();
+let selected = new Set();
+
+function $(s){ return document.querySelector(s); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function init(){
+  const d = DATA[opt];
+  bugsOn = new Set();
+  selected = new Set(d.tests.filter(t => t.draft).map(t => t.id));
+  $('#appfile').textContent = d.file;
+  renderBugs(); renderCode(); renderTests(); renderMatrix(); updateMeter();
+  $('#out').textContent = 'Press "Run pytest" to run your suite.';
+  $('#explain').innerHTML = '';
+}
+
+function renderCode(){
+  const d = DATA[opt];
+  $('#code').innerHTML = d.code.map(l => {
+    const on = l.bug && bugsOn.has(l.bug);
+    const txt = on ? l.b : l.t;
+    return `<span class="ln${on ? ' bug' : ''}">${esc(txt) || ' '}${on ? `<span class="tag">${l.bug}</span>` : ''}</span>`;
+  }).join('');
+}
+
+function renderBugs(){
+  const d = DATA[opt];
+  $('#bugs').innerHTML = BUG_IDS.map(b => `<label class="bugrow${bugsOn.has(b) ? ' on' : ''}"><input type="checkbox" data-bug="${b}" ${bugsOn.has(b) ? 'checked' : ''}><span><b>${b}</b> ${esc(d.bugs[b])}</span></label>`).join('');
+  document.querySelectorAll('#bugs input').forEach(i => i.addEventListener('change', e => {
+    const b = e.target.dataset.bug;
+    e.target.checked ? bugsOn.add(b) : bugsOn.delete(b);
+    e.target.closest('.bugrow').classList.toggle('on', e.target.checked);
+    renderCode();
+  }));
+}
+
+function renderTests(){
+  const d = DATA[opt];
+  $('#tests').innerHTML = d.tests.map(t => `
+    <div class="trow${t.draft ? ' draft' : ''}${selected.has(t.id) ? ' sel' : ''}">
+      <input type="checkbox" id="t_${t.id}" data-test="${t.id}" ${selected.has(t.id) ? 'checked' : ''} aria-label="Include ${t.id}">
+      <div style="min-width:0">
+        <label for="t_${t.id}"><code>${t.id}</code></label>
+        <div class="src">${t.draft ? 'Drafted by Copilot' : 'Edge case you can add'}</div>
+        <details><summary>Show the test and why it matters</summary><pre>${esc(t.code.join('\n'))}</pre><p style="margin:6px 0 0">${esc(t.why)}</p></details>
+      </div>
+    </div>`).join('');
+  document.querySelectorAll('#tests input').forEach(i => i.addEventListener('change', e => {
+    const id = e.target.dataset.test;
+    e.target.checked ? selected.add(id) : selected.delete(id);
+    e.target.closest('.trow').classList.toggle('sel', e.target.checked);
+    renderMatrix(); updateMeter();
+  }));
+}
+
+function caughtSet(){
+  const d = DATA[opt]; const s = new Set();
+  d.tests.forEach(t => { if (selected.has(t.id)) t.catches.forEach(b => s.add(b)); });
+  return s;
+}
+
+function updateMeter(){
+  const d = DATA[opt];
+  const c = caughtSet().size;
+  const added = d.tests.filter(t => !t.draft && selected.has(t.id)).length;
+  const useless = d.tests.filter(t => !t.draft && selected.has(t.id) && t.catches.length === 0).length;
+  $('#meter').style.width = (c / 6 * 100) + '%';
+  let msg = `${c} of 6 bugs caught · ${added} test${added === 1 ? '' : 's'} added`;
+  if (c === 6 && useless === 0) msg += ' · Complete and lean. Every added test earns its place.';
+  else if (c === 6) msg += ` · All bugs caught. ${useless} added test${useless === 1 ? '' : 's'} catch nothing new.`;
+  $('#meterText').textContent = msg;
+}
+
+function renderMatrix(){
+  const d = DATA[opt];
+  const rows = BUG_IDS.map(b => {
+    const catchers = d.tests.filter(t => selected.has(t.id) && t.catches.includes(b)).map(t => `<code>${t.id}</code>`);
+    return `<tr><td>${b}</td><td>${esc(d.bugs[b])}</td><td>${catchers.length ? '<span class="chip ok">Caught</span> ' + catchers.join(', ') : '<span class="chip no">Not caught</span>'}</td></tr>`;
+  }).join('');
+  $('#matrix').innerHTML = `<tr><th>Bug</th><th>What goes wrong</th><th>Caught by</th></tr>${rows}`;
+}
+
+// ----- pytest output -----
+function center(title, ch){ const t = ' ' + title + ' '; const total = 80 - t.length; const l = Math.floor(total / 2); return ch.repeat(Math.max(l, 0)) + t + ch.repeat(Math.max(total - l, 0)); }
+
+function evaluate(t){
+  // returns null if passes, else {line: index of failing line, e: [E lines]}
+  const fail = t.catches.some(b => bugsOn.has(b));
+  if (!fail) return null;
+  const leak = bugsOn.has('B5') ? 200 : 302;
+  if (t.kind === 'redirect') return {line: 3, e: ['assert 200 == 302', ' +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code']};
+  if (t.kind === 'reject' || t.kind === 'reject2') return {line: t.code.length - 1, e: [`assert ${leak} == 400`, ` +  where ${leak} = <WrapperTestResponse streamed [${STATUS_TEXT[leak]}]>.status_code`]};
+  if (t.kind === 'forbid') return {line: 3, e: ['assert 200 == 403', ' +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code']};
+  if (t.kind === 'unit'){ const u = DATA[opt].unit; return {line: 1, e: ['assert True is False', ` +  where True = can_move('${u[0]}', '${u[1]}')`]}; }
+  return null;
+}
+
+function run(){
+  const d = DATA[opt];
+  const list = d.tests.filter(t => selected.has(t.id));
+  if (!list.length){ $('#out').textContent = 'collected 0 items\n\nSelect at least one test.'; return; }
+  let lineNo = 14; // first test starts after imports, fixtures and helpers
+  const results = list.map(t => { const r = evaluate(t); const start = lineNo; lineNo += t.code.length + 2; return {t, r, start}; });
+  const failed = results.filter(x => x.r);
+  const passed = results.length - failed.length;
+  const secs = (0.11 + results.length * 0.03 + failed.length * 0.02).toFixed(2);
+  let o = [];
+  o.push('<span class="b">' + center('test session starts', '=') + '</span>');
+  o.push('platform win32 -- Python 3.12.6, pytest-8.3.3, pluggy-1.5.0');
+  o.push('rootdir: ' + d.root);
+  o.push(`<span class="b">collected ${results.length} item${results.length === 1 ? '' : 's'}</span>`);
+  o.push('');
+  const dots = results.map(x => x.r ? '<span class="r">F</span>' : '<span class="g">.</span>').join('');
+  const plainLen = d.testfile.length + 1 + results.length;
+  o.push(d.testfile + ' ' + dots + ' '.repeat(Math.max(1, 80 - plainLen - 6)) + '<span class="' + (failed.length ? 'r' : 'g') + '">[100%]</span>');
+  if (failed.length){
+    o.push('');
+    o.push('<span class="b">' + center('FAILURES', '=') + '</span>');
+    failed.forEach(x => {
+      o.push('<span class="r b">' + center(x.t.id, '_') + '</span>');
+      o.push('');
+      if (x.t.kind !== 'unit') { o.push("client = &lt;FlaskClient &lt;Flask 'app'&gt;&gt;"); o.push(''); }
+      x.t.code.slice(0, x.r.line + 1).forEach((ln, i) => {
+        o.push((i === x.r.line ? '<span class="r">&gt;</span>   ' : '    ') + esc(ln));
+      });
+      x.r.e.forEach(e => o.push('<span class="r">E       ' + esc(e) + '</span>'));
+      o.push('');
+      o.push(`<span class="r">${d.testfile}:${x.start + x.r.line}: AssertionError</span>`);
+    });
+    o.push('<span class="y">' + center('short test summary info', '=') + '</span>');
+    failed.forEach(x => o.push(`<span class="r">FAILED</span> ${d.nodefile}::${x.t.id} - ${esc(x.r.e[0])}`));
+    o.push('<span class="r">' + center(`${failed.length} failed, ${passed} passed in ${secs}s`, '=') + '</span>');
+  } else {
+    o.push('');
+    o.push('<span class="g">' + center(`${passed} passed in ${secs}s`, '=') + '</span>');
+  }
+  $('#out').innerHTML = o.join('\n');
+  if (hasGSAP) gsap.from('#out', {opacity: 0, y: 8, duration: .35});
+  // explanation
+  const escaped = [...bugsOn].filter(b => !caughtSet().has(b));
+  let html;
+  if (!bugsOn.size) html = `<div class="feedback info">No bugs are switched on, so every test should pass. Now switch on some bugs and run the suite again.</div>`;
+  else if (!failed.length) html = `<div class="feedback bad">All tests passed, but ${bugsOn.size} bug${bugsOn.size === 1 ? ' is' : 's are'} switched on. A green suite only means your tests did not notice anything. Add edge-case tests that would catch ${[...bugsOn].join(', ')}.</div>`;
+  else if (escaped.length) html = `<div class="feedback bad">${failed.length} test${failed.length === 1 ? '' : 's'} failed, but ${escaped.join(', ')} still got through without a single red test. Find a test that targets ${escaped.length === 1 ? 'it' : 'them'}.</div>`;
+  else html = `<div class="feedback ok">Every bug you switched on made at least one test fail. Read each failure: the line marked &gt; is the assert that failed, and the E lines show the value pytest actually got.</div>`;
+  $('#explain').innerHTML = html;
+}
+
+document.querySelectorAll('.opt .btn').forEach(b => b.addEventListener('click', () => {
+  opt = b.dataset.opt;
+  document.querySelectorAll('.opt .btn').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  init();
+}));
+$('#runBtn').addEventListener('click', run);
+$('#resetBtn').addEventListener('click', init);
+init();
+
+</script>
+</body>
+</html>

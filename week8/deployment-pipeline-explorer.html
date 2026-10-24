@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deployment Pipeline Explorer</title>
+<meta name="description" content="EGN 475 Week 8 interactive: follow a Flask prototype from your laptop to GitHub to a live PythonAnywhere site, and learn to fix common deployment errors.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .pipe{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 6px;position:relative}
+  @media(min-width:760px){.pipe{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  @media(min-width:1080px){.pipe{grid-template-columns:repeat(8,minmax(0,1fr))}}
+  .stage{font:inherit;text-align:left;border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-height:96px;transition:border-color .2s,background .2s,transform .2s}
+  .stage:hover{border-color:#C9CED6}
+  .stage .n{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .stage .t{font-weight:600;font-size:14px;line-height:1.3}
+  .stage .where{margin-top:auto;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;border-radius:999px;align-self:flex-start}
+  .w-laptop{background:#EEF4FF;color:#1E3A8A}.w-github{background:#F3E8FF;color:#5B21B6}.w-bash{background:#ECFDF5;color:#065F46}.w-web{background:#FEF3C7;color:#92400E}
+  .stage.active{border-color:var(--au-red);background:var(--au-red-soft);box-shadow:0 0 0 1px var(--au-red)}
+  .stage.done{border-color:#9AD3AE}
+  .stage.broken{border-color:var(--bad);background:var(--bad-soft)}
+  .detail h2{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .detail .cli{white-space:pre-wrap;overflow-wrap:anywhere}
+  .box{border-radius:10px;padding:10px 12px;margin-top:10px;font-size:15px}
+  .box.check{background:var(--ok-soft);border:1px solid #BBE5C8}
+  .box.trap{background:var(--warn-soft);border:1px solid #F7D9A8}
+  .scen{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .scen .btn[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .browser{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:8px 0}
+  .browser .bar{background:#EEF1F5;padding:6px 10px;font-family:var(--mono);font-size:12px;color:var(--ink-2);overflow-wrap:anywhere}
+  .browser .page{padding:14px;background:#fff}
+  .browser .page h4{margin:0 0 6px;font-size:18px}
+  .quiz .q{border-top:1px solid var(--line);padding:12px 0}
+  .quiz .opts{display:grid;gap:6px;margin-top:6px}
+  .quiz .opts button{font:inherit;font-size:15px;text-align:left;border:1px solid var(--line);border-radius:8px;background:#fff;padding:8px 10px;cursor:pointer;color:var(--ink)}
+  .quiz .opts button.right{background:var(--ok-soft);border-color:#86D19F}
+  .quiz .opts button.wrong{background:var(--bad-soft);border-color:#F5A3A3}
+
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 8 · Interactive A</div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 8 · Explorer</span>
+    <h1>Deployment pipeline explorer</h1>
+    <p class="lede">Deploying means putting your prototype on a server so anyone with the link can use it. Follow the eight stages from your laptop to a live PythonAnywhere site, then practice reading the errors that break a first deployment.</p>
+  </section>
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol><li>Press <b>Play the deploy</b> to watch the whole pipeline once, or click any stage to open it.</li><li>Each stage shows where you work (laptop, GitHub, or PythonAnywhere), the exact commands or settings, and a check to confirm it worked.</li><li>Replace <code>yourusername</code> with your PythonAnywhere username and <code>egn475-cafe-perez</code> with your own repository name.</li><li>In <b>What broke?</b>, open each scenario, read the symptom and the error log, and see which stage holds the fix.</li><li>Finish with the quick check at the bottom.</li></ol>
+  </details>
+
+  <section class="card">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2 style="margin:0">The pipeline</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="playBtn">Play the deploy</button><button class="btn" id="updBtn">Show the update loop</button></div>
+    </div>
+    <div class="pipe" id="pipe" role="list"></div>
+    <p style="margin:8px 0 0;font-size:13px;color:var(--muted)">Color tags show where each step happens: <span class="where w-laptop" style="padding:1px 6px;border-radius:999px;font-size:11px;font-weight:600">Laptop</span> <span class="where w-github" style="padding:1px 6px;border-radius:999px;font-size:11px;font-weight:600">GitHub</span> <span class="where w-bash" style="padding:1px 6px;border-radius:999px;font-size:11px;font-weight:600">Bash console</span> <span class="where w-web" style="padding:1px 6px;border-radius:999px;font-size:11px;font-weight:600">Web tab</span></p>
+  </section>
+
+  <section class="card detail" style="margin-top:16px" id="detail" aria-live="polite"></section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>What broke?</h2>
+    <p style="margin:0 0 10px;color:var(--ink-2)">First deployments almost always break once. On PythonAnywhere the browser only says "Something went wrong". The real answer is in the error log: Web tab, then the <b>Log files</b> section, then the file ending in <code>.error.log</code>. The newest lines are at the bottom.</p>
+    <div class="scen" id="scen" role="group" aria-label="Scenarios"></div>
+    <div id="scenOut"></div>
+  </section>
+
+  <section class="card quiz" style="margin-top:16px">
+    <h2>Quick check</h2>
+    <div id="quiz"></div>
+    <p id="quizScore" style="font-weight:600;margin:10px 0 0"></p>
+  </section>
+
+</main>
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+
+const STAGES = [
+ {n:1, t:'Get the app ready', where:'laptop', wl:'Laptop',
+  what:'Before code leaves your laptop, make sure the server can rebuild it. requirements.txt lists the packages. The secret key comes from an environment variable instead of being written in app.py. The database path is absolute (inside the instance folder), because the server starts your app from a different working folder.',
+  cmd:'# in your project folder, with the virtual environment active\npip freeze > requirements.txt\n\n# app.py (pattern)\napp.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev")\napp.config["DATABASE"] = os.path.join(app.instance_path, "egn475.sqlite")\nos.makedirs(app.instance_path, exist_ok=True)\n\n# .gitignore must contain\n.venv/\ninstance/\n__pycache__/',
+  check:'Open requirements.txt: Flask must be listed. Run the app locally one last time and log in as both roles.',
+  trap:'Committing your .venv folder or your .sqlite file. The server builds its own virtual environment and its own database.'},
+ {n:2, t:'Push to GitHub', where:'github', wl:'GitHub',
+  what:'GitHub is the bridge between your laptop and the server. Everything the server needs must be committed and pushed.',
+  cmd:'git add .\ngit commit -m "Prepare for deployment"\ngit push origin main',
+  check:'Refresh your repository page on github.com. You should see requirements.txt, app.py, schema.sql, templates and static, and no .venv folder.',
+  trap:'Forgetting to push. The server can only clone what is on GitHub, not what is on your laptop.'},
+ {n:3, t:'Clone on PythonAnywhere', where:'bash', wl:'Bash console',
+  what:'Log in to your free PythonAnywhere account, open the Consoles tab and start a Bash console. Clone your repository into your home folder.',
+  cmd:'git clone https://github.com/yourgithubname/egn475-cafe-perez.git\nls egn475-cafe-perez',
+  check:'ls lists your project files. Your project now lives at /home/yourusername/egn475-cafe-perez.',
+  trap:'Cloning a private repository without credentials. Keep the course repository public, as the syllabus requires.'},
+ {n:4, t:'Create the virtualenv', where:'bash', wl:'Bash console',
+  what:'A virtual environment on the server holds the same packages you used on your laptop. PythonAnywhere includes mkvirtualenv, which creates it under ~/.virtualenvs and activates it.',
+  cmd:'mkvirtualenv --python=/usr/bin/python3.12 egn475-venv\ncd egn475-cafe-perez\npip install -r requirements.txt',
+  check:'The prompt starts with (egn475-venv). pip list shows Flask. Next time, activate it with: workon egn475-venv',
+  trap:'Running pip install before the virtualenv is active. The packages then land somewhere your web app cannot see.'},
+ {n:5, t:'Create the web app', where:'web', wl:'Web tab',
+  what:'Open the Web tab and choose "Add a new web app". Keep the free domain yourusername.pythonanywhere.com, choose <b>Manual configuration</b> (not the Flask quickstart, which creates a sample app), and pick Python 3.12. Then fill in two settings on the Web tab.',
+  cmd:'Source code:  /home/yourusername/egn475-cafe-perez\nVirtualenv:   /home/yourusername/.virtualenvs/egn475-venv',
+  check:'Both paths are saved on the Web tab, and the virtualenv path is not shown in red.',
+  trap:'Choosing the Flask quickstart. It writes its own sample flask_app.py and WSGI file, which hides your real app.'},
+ {n:6, t:'Edit the WSGI file', where:'web', wl:'Web tab',
+  what:'The WSGI file is how PythonAnywhere starts your app. Click its link on the Web tab, delete the sample contents, and replace them with this pattern. The WSGI file is not in your repository, so it is a safe place to set the secret key.',
+  cmd:'# /var/www/yourusername_pythonanywhere_com_wsgi.py\nimport os\nimport sys\n\npath = "/home/yourusername/egn475-cafe-perez"\nif path not in sys.path:\n    sys.path.insert(0, path)\n\nos.environ["SECRET_KEY"] = "paste-a-long-random-value-here"\n\nfrom app import app as application',
+  check:'The last line imports the Flask object from app.py and names it application. That exact name is what the server looks for.',
+  trap:'A path that does not match the folder name, or a main file not called app.py. Either one gives "No module named app" in the error log.'},
+ {n:7, t:'Static files and database', where:'bash', wl:'Bash console',
+  what:'On the Web tab, add a static files mapping so the server delivers CSS and images directly. Then create the database on the server by running your init command in the Bash console.',
+  cmd:'# Web tab, Static files section\nURL:        /static/\nDirectory:  /home/yourusername/egn475-cafe-perez/static\n\n# Bash console\nworkon egn475-venv\ncd ~/egn475-cafe-perez\nflask --app app init-db\nflask --app app seed      # only if your project has a seed command',
+  check:'The init command prints its message (for example "Initialized the database.") and a .sqlite file appears in the instance folder.',
+  trap:'Skipping init-db. The server database is a new, empty file, so the first page that queries a table crashes.'},
+ {n:8, t:'Reload and test live', where:'web', wl:'Web tab',
+  what:'Press the green <b>Reload</b> button on the Web tab, then open your site. Test it like a user: register, log in as each role, and complete the main task. On a free account the app pauses after three months unless you press "Run until 3 months from today" on the Web tab.',
+  cmd:'https://yourusername.pythonanywhere.com\n\nError log:   /var/log/yourusername.pythonanywhere.com.error.log\nServer log:  /var/log/yourusername.pythonanywhere.com.server.log',
+  check:'The live site works for both roles from a phone, not only from your laptop.',
+  trap:'Changing files and forgetting to press Reload. The server keeps running the old code until you do.'}
+];
+
+const SCEN = [
+ {k:'flask', label:'No module named flask', stage:4,
+  browser:['Something went wrong :-(', 'There may be a bug in your code, or a problem with the server configuration. Check the error log on the Web tab.'],
+  log:'2026-12-01 14:03:11,512: Error running WSGI application\n2026-12-01 14:03:11,513: ModuleNotFoundError: No module named \'flask\'\n2026-12-01 14:03:11,513:   File "/var/www/yourusername_pythonanywhere_com_wsgi.py", line 10, in <module>\n2026-12-01 14:03:11,513:     from app import app as application',
+  cause:'The web app is not using the virtualenv that has Flask, or pip install ran before the virtualenv was active.',
+  fix:'On the Web tab set Virtualenv to /home/yourusername/.virtualenvs/egn475-venv. In Bash: workon egn475-venv, then pip install -r requirements.txt. Press Reload.'},
+ {k:'app', label:'No module named app', stage:6,
+  browser:['Something went wrong :-(', 'There may be a bug in your code, or a problem with the server configuration. Check the error log on the Web tab.'],
+  log:'2026-12-01 14:20:45,100: Error running WSGI application\n2026-12-01 14:20:45,101: ModuleNotFoundError: No module named \'app\'\n2026-12-01 14:20:45,101:   File "/var/www/yourusername_pythonanywhere_com_wsgi.py", line 10, in <module>\n2026-12-01 14:20:45,101:     from app import app as application',
+  cause:'The path in the WSGI file does not point to the folder that contains app.py (for example /home/yourusername/egn475 instead of /home/yourusername/egn475-cafe-perez).',
+  fix:'In Bash run ls ~ to see the exact folder name, correct the path line in the WSGI file, save, and press Reload.'},
+ {k:'secret', label:'Login crashes', stage:6,
+  browser:['Internal Server Error', 'The server encountered an internal error and was unable to complete your request.'],
+  log:'2026-12-01 15:02:09,877: Exception on /login [POST]\n2026-12-01 15:02:09,877: Traceback (most recent call last):\n2026-12-01 15:02:09,878:   File "/home/yourusername/egn475-cafe-perez/app.py", line 101, in login\n2026-12-01 15:02:09,878:     session["user_id"] = user["id"]\n2026-12-01 15:02:09,879: RuntimeError: The session is unavailable because no secret key was set.  Set the secret_key on the application to something unique and secret.',
+  cause:'The pages load, but the session needs a secret key, and none was set on the server.',
+  fix:'Add os.environ["SECRET_KEY"] = "..." to the WSGI file before the import line (generate a value with: python -c "import secrets; print(secrets.token_hex(32))"), make sure app.py reads SECRET_KEY, and press Reload.'},
+ {k:'db', label:'No such table', stage:7,
+  browser:['Internal Server Error', 'The server encountered an internal error and was unable to complete your request.'],
+  log:'2026-12-01 15:40:31,220: Exception on / [GET]\n2026-12-01 15:40:31,220: Traceback (most recent call last):\n2026-12-01 15:40:31,221:   File "/home/yourusername/egn475-cafe-perez/app.py", line 12, in menu\n2026-12-01 15:40:31,221:     items = db.execute("SELECT * FROM menu_items WHERE available = 1").fetchall()\n2026-12-01 15:40:31,222: sqlite3.OperationalError: no such table: menu_items',
+  cause:'The database on the server was never initialized, or the app uses a relative database path and opened a new empty file in a different folder.',
+  fix:'Use an absolute path (app.instance_path) in app.py, push and pull the change, then run flask --app app init-db (and your seed command) in the Bash console. Press Reload.'},
+ {k:'stale', label:'My changes do not show', stage:8,
+  browser:['Café Calle Ocho', 'The site works, but it still shows last week\'s menu page without the new button you just added.'],
+  log:'(no errors in the error log)',
+  cause:'The server is still running the old code. Pushing to GitHub does not update PythonAnywhere by itself.',
+  fix:'In the Bash console: cd ~/egn475-cafe-perez, then git pull. If requirements.txt changed, run pip install -r requirements.txt inside the virtualenv. Then press Reload on the Web tab.'}
+];
+
+const QUIZ = [
+ {q:'Your site says "Something went wrong". Where do you look first?', o:['The error log on the Web tab, newest lines at the bottom','GitHub Actions','Your laptop terminal','The browser address bar'], a:0,
+  e:'PythonAnywhere writes the real exception to yourusername.pythonanywhere.com.error.log. Your laptop terminal knows nothing about the server.'},
+ {q:'Which line must end the WSGI file?', o:['app.run(debug=True)','from app import app as application','import flask','application.start()'], a:1,
+  e:'The server imports a callable named application. app.run() is only for running on your own computer.'},
+ {q:'You fixed a bug, committed and pushed. The live site still has the bug. What is missing?', o:['Delete and recreate the web app','git pull in the Bash console, then Reload','Wait 24 hours','Push again with --force'], a:1,
+  e:'Deployment on PythonAnywhere is manual: pull the new code onto the server, then reload the web app.'},
+ {q:'Where should the production secret key live?', o:['Hard-coded in app.py on GitHub','In an environment variable set in the WSGI file','In requirements.txt','In the README'], a:1,
+  e:'Anything in a public repository is public. The WSGI file stays on the server, so it can set SECRET_KEY safely.'}
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+let current = 1, playing = false, quizAnswered = {}, quizRight = 0;
+
+function renderPipe(){
+  $('#pipe').innerHTML = STAGES.map(s => `<button class="stage" role="listitem" data-n="${s.n}" aria-label="Stage ${s.n}: ${esc(s.t)}"><span class="n">Stage ${s.n}</span><span class="t">${esc(s.t)}</span><span class="where w-${s.where}">${s.wl}</span></button>`).join('');
+  document.querySelectorAll('.stage').forEach(b => b.addEventListener('click', () => { stop(); open(+b.dataset.n); }));
+}
+function open(n, broken){
+  current = n;
+  const s = STAGES[n - 1];
+  document.querySelectorAll('.stage').forEach(b => {
+    const k = +b.dataset.n;
+    b.classList.toggle('active', k === n && !broken);
+    b.classList.toggle('broken', k === n && !!broken);
+  });
+  $('#detail').innerHTML = `
+    <h2><span class="pill">Stage ${s.n} of 8</span>${esc(s.t)} <span class="where w-${s.where}" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px">${s.wl}</span></h2>
+    <p style="margin:0 0 10px">${s.what}</p>
+    <div class="cli">${esc(s.cmd)}</div>
+    <div class="box check"><b>Check it worked:</b> ${esc(s.check)}</div>
+    <div class="box trap"><b>Common trap:</b> ${esc(s.trap)}</div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn" id="prevSt" ${n === 1 ? 'disabled' : ''}>Previous stage</button>
+      <button class="btn" id="nextSt" ${n === 8 ? 'disabled' : ''}>Next stage</button>
+    </div>`;
+  $('#prevSt').onclick = () => open(n - 1);
+  $('#nextSt').onclick = () => open(n + 1);
+  if (hasGSAP) gsap.from('#detail > *', {opacity: 0, y: 6, duration: .25, stagger: .03});
+}
+let timer = null;
+function stop(){ playing = false; clearTimeout(timer); $('#playBtn').textContent = 'Play the deploy'; }
+function play(seq, i = 0){
+  if (!playing) return;
+  if (i >= seq.length){ stop(); return; }
+  document.querySelectorAll('.stage').forEach(b => { if (seq.slice(0, i).includes(+b.dataset.n)) b.classList.add('done'); });
+  open(seq[i]);
+  timer = setTimeout(() => play(seq, i + 1), 1600);
+}
+$('#playBtn').addEventListener('click', () => {
+  if (playing){ stop(); return; }
+  document.querySelectorAll('.stage').forEach(b => b.classList.remove('done'));
+  playing = true; $('#playBtn').textContent = 'Stop'; play([1,2,3,4,5,6,7,8]);
+});
+$('#updBtn').addEventListener('click', () => {
+  stop();
+  document.querySelectorAll('.stage').forEach(b => b.classList.remove('done', 'active', 'broken'));
+  [2,8].forEach(n => document.querySelector(`.stage[data-n="${n}"]`).classList.add('active'));
+  $('#detail').innerHTML = `<h2>The update loop</h2>
+    <p style="margin:0 0 10px">After the first deployment you do not repeat all eight stages. Every later change follows a short loop:</p>
+    <div class="cli">${esc('# 1. Laptop\ngit add .\ngit commit -m "Describe the change"\ngit push origin main\n\n# 2. PythonAnywhere Bash console\nworkon egn475-venv\ncd ~/egn475-cafe-perez\ngit pull\npip install -r requirements.txt   # only if requirements changed\n\n# 3. Web tab\nPress Reload, then test the live site')}</div>
+    <div class="box check"><b>Check it worked:</b> the change you just made is visible on yourusername.pythonanywhere.com.</div>`;
+});
+
+function renderScen(){
+  $('#scen').innerHTML = SCEN.map(s => `<button class="btn" data-k="${s.k}" aria-pressed="false">${esc(s.label)}</button>`).join('');
+  document.querySelectorAll('#scen .btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#scen .btn').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    const s = SCEN.find(x => x.k === b.dataset.k);
+    $('#scenOut').innerHTML = `
+      <div class="grid two">
+        <div>
+          <h3>What the user sees</h3>
+          <div class="browser"><div class="bar">https://yourusername.pythonanywhere.com</div><div class="page"><h4>${esc(s.browser[0])}</h4><p style="margin:0">${esc(s.browser[1])}</p></div></div>
+          <h3 style="margin-top:12px">Error log</h3>
+          <div class="cli" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(s.log)}</div>
+        </div>
+        <div>
+          <h3>Cause</h3><p style="margin:0 0 10px">${esc(s.cause)}</p>
+          <h3>Fix</h3><p style="margin:0 0 10px">${esc(s.fix)}</p>
+          <button class="btn" id="goStage">Open stage ${s.stage}: ${esc(STAGES[s.stage - 1].t)}</button>
+        </div>
+      </div>`;
+    document.querySelectorAll('.stage').forEach(x => x.classList.toggle('broken', +x.dataset.n === s.stage));
+    $('#goStage').onclick = () => { open(s.stage, true); $('#detail').scrollIntoView({behavior: 'smooth', block: 'start'}); };
+  }));
+}
+
+function renderQuiz(){
+  $('#quiz').innerHTML = QUIZ.map((q, i) => `<div class="q"><b>${i + 1}. ${esc(q.q)}</b><div class="opts">${q.o.map((o, j) => `<button data-q="${i}" data-o="${j}">${esc(o)}</button>`).join('')}</div><div class="fb" id="fb${i}"></div></div>`).join('');
+  document.querySelectorAll('#quiz .opts button').forEach(b => b.addEventListener('click', () => {
+    const qi = +b.dataset.q, oi = +b.dataset.o, q = QUIZ[qi];
+    if (quizAnswered[qi] !== undefined) return;
+    quizAnswered[qi] = oi;
+    const ok = oi === q.a; if (ok) quizRight++;
+    b.classList.add(ok ? 'right' : 'wrong');
+    if (!ok) document.querySelector(`#quiz button[data-q="${qi}"][data-o="${q.a}"]`).classList.add('right');
+    $('#fb' + qi).innerHTML = `<div class="feedback ${ok ? 'ok' : 'bad'}">${esc(q.e)}</div>`;
+    const n = Object.keys(quizAnswered).length;
+    $('#quizScore').textContent = n === QUIZ.length ? `You got ${quizRight} of ${QUIZ.length}. ${quizRight === QUIZ.length ? 'Ready to deploy.' : 'Review the stages linked to the questions you missed.'}` : '';
+  }));
+}
+
+renderPipe(); renderScen(); renderQuiz(); open(1);
+
+</script>
+</body>
+</html>

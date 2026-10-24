@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo Day Readiness</title>
+<meta name="description" content="EGN 475 Week 8 interactive: plan a five-minute prototype demo, choose strong openings and claims, and print a readiness summary.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .part{margin-top:16px}
+  .part h2{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+  .part h2 .pts{font-size:14px;color:var(--muted);font-weight:600}
+  .order{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  .order li{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff}
+  .order li .pos{font-family:var(--mono);font-weight:600;color:var(--au-red-dark);min-width:22px}
+  .order li .txt{flex:1;min-width:0}
+  .order li .txt small{display:block;color:var(--muted)}
+  .order li .mv{display:flex;gap:4px}
+  .order li .mv button{font:inherit;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer}
+  .order li.right{border-color:#86D19F;background:var(--ok-soft)}
+  .order li.wrong{border-color:#F5A3A3;background:var(--bad-soft)}
+  .pair{border-top:1px solid var(--line);padding:12px 0}
+  .pair .ab{display:grid;gap:8px;margin-top:6px}
+  @media(min-width:760px){.pair .ab{grid-template-columns:1fr 1fr}}
+  .pick{font:inherit;font-size:15px;text-align:left;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px;cursor:pointer;color:var(--ink)}
+  .pick.sel{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+  .pick.right{border-color:#86D19F;background:var(--ok-soft)}
+  .pick.wrong{border-color:#F5A3A3;background:var(--bad-soft)}
+  .claim{display:grid;gap:8px;border-top:1px solid var(--line);padding:12px 0}
+  @media(min-width:760px){.claim{grid-template-columns:1fr auto;align-items:center}}
+  .claim .sw{display:flex;gap:6px}
+  .claim .sw button{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px 14px;cursor:pointer}
+  .claim .sw button.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .claim .exp{grid-column:1/-1}
+  .checks{display:grid;gap:8px}
+  @media(min-width:760px){.checks{grid-template-columns:1fr 1fr}}
+  .checks label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;cursor:pointer}
+  .checks input{margin-top:4px;accent-color:var(--net-green)}
+  .total{position:sticky;bottom:0;z-index:5;background:#fff;border-top:3px solid var(--au-red);box-shadow:0 -4px 12px rgba(16,24,40,.08);margin-top:16px;padding:12px 16px;border-radius:12px 12px 0 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .total .big{font-size:26px;font-weight:700;color:var(--au-red-dark)}
+  #summary{display:none}
+  @media print{
+    body{background:#fff}
+    .topbar,.hero,details.howto,.part,.total,footer.foot{display:none!important}
+    #summary{display:block!important}
+  }
+
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 8 · Interactive B</div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 8 · Challenge</span>
+    <h1>Demo day readiness challenge</h1>
+    <p class="lede">Five minutes is enough to show a prototype well, if you plan them. Build the outline of a strong demo, pick the better opening lines, spot weak claims, and finish with a checklist you can print and bring to class.</p>
+  </section>
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol><li>Part 1 (25 points): put the parts of a five-minute demo in order with the arrow buttons, then press Check.</li><li>Part 2 (25 points): for each pair, choose the stronger thing to say.</li><li>Part 3 (30 points): mark each claim or slide as strong or weak.</li><li>Part 4 (20 points): tick only what is really true for your project today. This part is a self-assessment.</li><li>Press <b>Print my readiness summary</b> to save a page with your score, your outline, and your remaining to-do items.</li></ol>
+  </details>
+
+  <section class="card part" id="p1">
+    <h2>Part 1: order your five minutes <span class="pts" id="s1">0 / 25</span></h2>
+    <p style="margin:0 0 10px;color:var(--ink-2)">A demo tells a story: a problem, the people who have it, your solution working live, what you learned, and what comes next. Use the arrows to reorder the parts.</p>
+    <ol class="order" id="order"></ol>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn primary" id="c1">Check part 1</button></div>
+    <div id="f1"></div>
+  </section>
+
+  <section class="card part" id="p2">
+    <h2>Part 2: say the stronger thing <span class="pts" id="s2">0 / 25</span></h2>
+    <div id="pairs"></div>
+    <button class="btn primary" id="c2">Check part 2</button>
+    <div id="f2"></div>
+  </section>
+
+  <section class="card part" id="p3">
+    <h2>Part 3: strong or weak? <span class="pts" id="s3">0 / 30</span></h2>
+    <p style="margin:0 0 4px;color:var(--ink-2)">Judges and classmates trust evidence: what real users did, what you tested, what you changed. They do not trust big claims without proof.</p>
+    <div id="claims"></div>
+    <button class="btn primary" id="c3">Check part 3</button>
+    <div id="f3"></div>
+  </section>
+
+  <section class="card part" id="p4">
+    <h2>Part 4: readiness checklist <span class="pts" id="s4">0 / 20</span></h2>
+    <p style="margin:0 0 10px;color:var(--ink-2)">Be honest. Anything you leave unticked appears on your printed to-do list.</p>
+    <div class="checks" id="checks"></div>
+  </section>
+
+  <div class="total" role="status">
+    <span>Total</span><span class="big" id="total">0</span><span>/ 100</span>
+    <span id="totalMsg" style="color:var(--ink-2);font-size:14px"></span>
+    <button class="btn primary" id="printBtn" style="margin-left:auto">Print my readiness summary</button>
+  </div>
+
+  <section id="summary"></section>
+
+</main>
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+
+const PARTS = [
+ {id:'problem', t:'The problem, in one sentence about a real person', s:'About 30 seconds'},
+ {id:'users', t:'Who it is for: your target users', s:'About 30 seconds'},
+ {id:'demo', t:'Live demo of the main task, start to finish', s:'About 2 minutes'},
+ {id:'learned', t:'What testers taught you and what you changed', s:'About 1 minute'},
+ {id:'copilot', t:'How Copilot helped, and one time it was wrong', s:'About 30 seconds'},
+ {id:'next', t:'Next steps and your live link', s:'About 30 seconds'}
+];
+const CORRECT = ['problem','users','demo','learned','copilot','next'];
+const START = ['demo','next','problem','copilot','users','learned'];
+
+const PAIRS = [
+ {a:'"Hi, I\'m Ana, and this is my project for EGN 475."', b:'"Every Saturday morning, Café Calle Ocho loses orders written on paper. Our order board puts every order on one screen."', ok:'b',
+  e:'Open with the problem and a real setting. Your name and the course code do not tell the audience why they should care.'},
+ {a:'"María wants to book a haircut at 10 p.m., after the salon closes. With our booker she picks a free slot in under a minute."', b:'"Our app has 14 routes, 5 templates and 3 tables."', ok:'a',
+  e:'Talk about a user and an outcome first. Route counts describe effort, not value.'},
+ {a:'"Let me click through every page so you can see everything."', b:'"I will show the main task live: place an order as a customer, then mark it ready as staff."', ok:'b',
+  e:'One complete task, shown from both roles, proves the prototype works. A tour of every page eats your time and shows nothing finished.'},
+ {a:'"The live site is not responding, so I will switch to my recorded backup video."', b:'"Hold on, let me debug this right now."', ok:'a',
+  e:'Live problems happen to professionals too. A calm switch to the backup keeps your five minutes. Debugging in front of the room does not.'},
+ {a:'"Copilot did most of the work, so it was easy."', b:'"Copilot suggested storing passwords as plain text. I replaced it with generate_password_hash and added a test."', ok:'b',
+  e:'Show that you own the code: a specific Copilot mistake you caught is stronger than any general claim.'}
+];
+
+const CLAIMS = [
+ {t:'"Our app is 100% bug free."', ok:'weak', e:'No prototype is bug free, and the claim invites a challenge. Say what you tested instead: "Our 14 tests pass, including 5 edge cases."'},
+ {t:'"Two of our three testers finished booking without help. The third got stuck on the date field, so we added a calendar picker."', ok:'strong', e:'Real users, a real problem, and a change you made because of it. This is exactly what prototyping is for.'},
+ {t:'A slide showing 40 lines of Python code.', ok:'weak', e:'Nobody can read 40 lines in a few seconds. Show the feature working, and keep code to a few lines that make one point.'},
+ {t:'"Live demo: yourname.pythonanywhere.com. The staff demo login is shown on screen so you can try it too."', ok:'strong', e:'A live link the audience can open turns a claim into proof.'},
+ {t:'"Copilot wrote the app for us."', ok:'weak', e:'This gives away ownership. Explain what you specified, what you kept, and what you changed.'},
+ {t:'"Next step: online payments. Testers asked for it, but we left it out of this prototype on purpose."', ok:'strong', e:'Knowing what is out of scope, and why, shows good prototyping judgment.'}
+];
+
+const CHECKS = [
+ 'The live URL works for both roles from a phone',
+ 'Demo accounts for both roles exist and their logins are written down',
+ 'Seed data looks realistic (real menu items or services, not "test test")',
+ 'My backup video is recorded and plays without internet',
+ 'I rehearsed out loud and finished in under five minutes',
+ 'The README is complete and the repository is tagged v1.0',
+ 'I can tell one story where Copilot was wrong and how I caught it',
+ 'Browser zoom is set so the room can read it, and notifications are off',
+ 'My laptop is charged and I have an adapter for the classroom screen',
+ 'I know my answer to "What would you build next?"'
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+let order = START.slice(), scores = [0,0,0,0], checked = [false,false,false], pairSel = {}, claimSel = {};
+
+function renderOrder(locked){
+  $('#order').innerHTML = order.map((id, i) => {
+    const p = PARTS.find(x => x.id === id);
+    return `<li data-id="${id}"><span class="pos">${i + 1}</span><span class="txt">${esc(p.t)}<small>${p.s}</small></span>
+      <span class="mv"><button aria-label="Move up" data-i="${i}" data-d="-1" ${i === 0 || locked ? 'disabled' : ''}>&#8593;</button><button aria-label="Move down" data-i="${i}" data-d="1" ${i === order.length - 1 || locked ? 'disabled' : ''}>&#8595;</button></span></li>`;
+  }).join('');
+  document.querySelectorAll('#order .mv button').forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.i, j = i + +b.dataset.d;
+    [order[i], order[j]] = [order[j], order[i]];
+    renderOrder(false);
+    const btn = document.querySelector(`#order li:nth-child(${j + 1}) .mv button[data-d="${b.dataset.d}"]`) || document.querySelector(`#order li:nth-child(${j + 1}) .mv button`);
+    if (btn && !btn.disabled) btn.focus();
+  }));
+}
+function positionOk(i){
+  const id = order[i];
+  if (id === CORRECT[i]) return true;
+  // learned and copilot may swap
+  if ((i === 3 || i === 4) && ['learned','copilot'].includes(id) && ['learned','copilot'].includes(CORRECT[i])) return true;
+  return false;
+}
+$('#c1').addEventListener('click', () => {
+  if (checked[0]) return;
+  const n = order.filter((_, i) => positionOk(i)).length;
+  scores[0] = n === 6 ? 25 : Math.round(25 * n / 6 * 0.8);
+  checked[0] = true; renderOrder(true);
+  document.querySelectorAll('#order li').forEach((li, i) => li.classList.add(positionOk(i) ? 'right' : 'wrong'));
+  $('#f1').innerHTML = `<div class="feedback ${n === 6 ? 'ok' : 'info'}">${n} of 6 in a good position. A strong order: problem, users, live demo, what you learned, Copilot, next steps. (The two middle parts after the demo can swap.) The demo sits in the middle so the audience already cares when they see it, and you finish with the link they can open.</div>`;
+  $('#c1').disabled = true; update();
+});
+
+function renderPairs(){
+  $('#pairs').innerHTML = PAIRS.map((p, i) => `<div class="pair"><b>${i + 1}.</b><div class="ab">
+    <button class="pick" data-p="${i}" data-k="a">${esc(p.a)}</button><button class="pick" data-p="${i}" data-k="b">${esc(p.b)}</button></div><div id="pe${i}"></div></div>`).join('');
+  document.querySelectorAll('.pick').forEach(b => b.addEventListener('click', () => {
+    if (checked[1]) return;
+    const i = b.dataset.p;
+    document.querySelectorAll(`.pick[data-p="${i}"]`).forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel'); pairSel[i] = b.dataset.k;
+  }));
+}
+$('#c2').addEventListener('click', () => {
+  if (checked[1]) return;
+  if (Object.keys(pairSel).length < PAIRS.length){ $('#f2').innerHTML = '<div class="feedback info">Choose one option in every pair first.</div>'; return; }
+  let n = 0;
+  PAIRS.forEach((p, i) => {
+    const ok = pairSel[i] === p.ok; if (ok) n++;
+    document.querySelector(`.pick[data-p="${i}"][data-k="${p.ok}"]`).classList.add('right');
+    if (!ok) document.querySelector(`.pick[data-p="${i}"][data-k="${pairSel[i]}"]`).classList.add('wrong');
+    $('#pe' + i).innerHTML = `<div class="feedback ${ok ? 'ok' : 'bad'}" style="margin-top:8px">${esc(p.e)}</div>`;
+  });
+  scores[1] = n * 5; checked[1] = true; $('#c2').disabled = true;
+  $('#f2').innerHTML = `<div class="feedback ${n === 5 ? 'ok' : 'info'}">${n} of 5 correct.</div>`; update();
+});
+
+function renderClaims(){
+  $('#claims').innerHTML = CLAIMS.map((c, i) => `<div class="claim"><span>${esc(c.t)}</span><span class="sw" role="group" aria-label="Claim ${i + 1}">
+    <button data-c="${i}" data-v="strong">Strong</button><button data-c="${i}" data-v="weak">Weak</button></span><div class="exp" id="ce${i}"></div></div>`).join('');
+  document.querySelectorAll('.claim .sw button').forEach(b => b.addEventListener('click', () => {
+    if (checked[2]) return;
+    const i = b.dataset.c;
+    document.querySelectorAll(`.claim .sw button[data-c="${i}"]`).forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel'); claimSel[i] = b.dataset.v;
+  }));
+}
+$('#c3').addEventListener('click', () => {
+  if (checked[2]) return;
+  if (Object.keys(claimSel).length < CLAIMS.length){ $('#f3').innerHTML = '<div class="feedback info">Mark every item as strong or weak first.</div>'; return; }
+  let n = 0;
+  CLAIMS.forEach((c, i) => {
+    const ok = claimSel[i] === c.ok; if (ok) n++;
+    $('#ce' + i).innerHTML = `<div class="feedback ${ok ? 'ok' : 'bad'}" style="margin-top:4px"><b>${c.ok === 'strong' ? 'Strong' : 'Weak'}.</b> ${esc(c.e)}</div>`;
+  });
+  scores[2] = n * 5; checked[2] = true; $('#c3').disabled = true;
+  $('#f3').innerHTML = `<div class="feedback ${n === 6 ? 'ok' : 'info'}">${n} of 6 correct.</div>`; update();
+});
+
+function renderChecks(){
+  $('#checks').innerHTML = CHECKS.map((c, i) => `<label><input type="checkbox" data-k="${i}"><span>${esc(c)}</span></label>`).join('');
+  document.querySelectorAll('#checks input').forEach(i => i.addEventListener('change', () => {
+    scores[3] = document.querySelectorAll('#checks input:checked').length * 2; update();
+  }));
+}
+
+function update(){
+  $('#s1').textContent = `${scores[0]} / 25`; $('#s2').textContent = `${scores[1]} / 25`; $('#s3').textContent = `${scores[2]} / 30`; $('#s4').textContent = `${scores[3]} / 20`;
+  const t = scores.reduce((a, b) => a + b, 0);
+  $('#total').textContent = t;
+  const left = 3 - checked.filter(Boolean).length;
+  $('#totalMsg').textContent = left ? `${left} part${left === 1 ? '' : 's'} still to check.` : (t >= 85 ? 'You are ready for demo day.' : 'Review the feedback and work through your to-do list.');
+  if (hasGSAP) gsap.fromTo('#total', {scale: 1.25}, {scale: 1, duration: .3});
+}
+
+function buildSummary(){
+  const t = scores.reduce((a, b) => a + b, 0);
+  const todo = CHECKS.filter((_, i) => !document.querySelector(`#checks input[data-k="${i}"]`).checked);
+  const outline = CORRECT.map(id => PARTS.find(p => p.id === id));
+  $('#summary').innerHTML = `
+    <h1 style="font-size:24px;margin:0 0 4px">Demo day readiness summary</h1>
+    <p style="margin:0 0 12px">EGN 475 Software Prototyping · Week 8 · Printed ${new Date().toLocaleDateString()}</p>
+    <p style="margin:0 0 4px">Name: ______________________________ &nbsp; Project: ______________________________</p>
+    <h2 style="font-size:18px;margin:16px 0 6px">Score: ${t} / 100</h2>
+    <p style="margin:0">Demo order ${scores[0]}/25 · Openings ${scores[1]}/25 · Claims ${scores[2]}/30 · Checklist ${scores[3]}/20</p>
+    <h2 style="font-size:18px;margin:16px 0 6px">My five-minute outline</h2>
+    <ol>${outline.map(p => `<li>${esc(p.t)} (${p.s.toLowerCase()})<br>Notes: ______________________________________________</li>`).join('')}</ol>
+    <h2 style="font-size:18px;margin:16px 0 6px">Still to do before demo day</h2>
+    ${todo.length ? `<ul>${todo.map(x => `<li>&#9744; ${esc(x)}</li>`).join('')}</ul>` : '<p>Nothing left. Every checklist item is done.</p>'}`;
+}
+$('#printBtn').addEventListener('click', () => { buildSummary(); window.print(); });
+window.addEventListener('beforeprint', buildSummary);
+
+renderOrder(false); renderPairs(); renderClaims(); renderChecks(); update();
+
+</script>
+</body>
+</html>

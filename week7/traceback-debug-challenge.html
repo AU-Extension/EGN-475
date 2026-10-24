@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traceback Debugging Challenge</title>
+<meta name="description" content="EGN 475 Week 7 interactive: read real Flask, Jinja and sqlite3 tracebacks, find the line that matters, and choose the fix.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --au-red:#E1141E; --au-red-dark:#A3282B; --au-red-soft:#FDECEC;
+    --ink:#16181D; --ink-2:#3B4250; --muted:#6B7280; --line:#E3E6EB;
+    --bg:#F5F6F8; --card:#FFFFFF; --code-bg:#0F1722; --code-ink:#D7E3F4;
+    --net-blue:#2563EB; --net-green:#15803D; --net-amber:#B45309; --net-purple:#7C3AED; --net-teal:#0F766E;
+    --ok:#15803D; --ok-soft:#E7F6EC; --bad:#B91C1C; --bad-soft:#FDECEC; --warn:#B45309; --warn-soft:#FEF4E6;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+    --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--au-red-dark)}
+  /* top bar with AU logo (logo PNG has wide padding, so it is cropped with a wrapper) */
+  .topbar{background:#fff;border-bottom:3px solid var(--au-red);}
+  .topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .au-logo{width:130px;height:36px;overflow:hidden;flex:none;display:block}
+  .au-logo img{width:145px;height:auto;margin:-28px 0 0 -8px;display:block}
+  .crumb{font-size:13px;color:var(--muted);letter-spacing:.02em;border-left:1px solid var(--line);padding-left:16px}
+  .crumb b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+  .hero{margin:4px 0 20px}
+  .eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--au-red-dark);background:var(--au-red-soft);padding:3px 10px;border-radius:999px}
+  h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 8px}
+  .lede{color:var(--ink-2);max-width:760px;margin:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .grid{display:grid;gap:16px}
+  @media(min-width:900px){.grid.two{grid-template-columns:1.4fr 1fr}}
+  details.howto{margin:0 0 16px}
+  details.howto summary{cursor:pointer;font-weight:600}
+  .btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;cursor:pointer;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:#C9CED6;background:#FAFAFB}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #93C5FD;outline-offset:2px}
+  .btn.primary{background:var(--au-red);border-color:var(--au-red);color:#fff}
+  .btn.primary:hover{background:var(--au-red-dark);border-color:var(--au-red-dark)}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+  input[type=text],input[type=number],select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #CBD2DA;border-radius:8px;background:#fff;color:var(--ink);min-width:0}
+  .mono,code,kbd{font-family:var(--mono)}
+  .cli{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:13px;line-height:1.5;border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#EEF1F5;color:var(--ink-2)}
+  .feedback{border-radius:10px;padding:12px 14px;margin-top:12px;font-size:15px}
+  .feedback.ok{background:var(--ok-soft);color:#14532D;border:1px solid #BBE5C8}
+  .feedback.bad{background:var(--bad-soft);color:#7F1D1D;border:1px solid #F5C2C2}
+  .feedback.info{background:#EEF4FF;color:#1E3A8A;border:1px solid #C7D7FE}
+  .score{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+  .score .big{font-size:28px;color:var(--au-red-dark)}
+  table.data{border-collapse:collapse;width:100%;font-size:14px}
+  table.data th,table.data td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left}
+  table.data th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .scroll-x{overflow-x:auto}
+  svg text{font-family:var(--sans)}
+  footer.foot{max-width:1120px;margin:0 auto;padding:16px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
+  [hidden]{display:none!important}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  .layout{display:grid;gap:16px}
+  .layout>*{min-width:0}
+  @media(min-width:980px){.layout{grid-template-columns:1.6fr 1fr}}
+  .progress{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+  .progress span{width:28px;height:8px;border-radius:999px;background:#E3E6EB}
+  .progress span.cur{background:var(--ink)}
+  .progress span.ok{background:var(--net-green)}
+  .progress span.part{background:#F59E0B}
+  .progress span.bad{background:var(--bad)}
+  .situation{background:#FFF8EB;border:1px solid #F7D9A8;border-radius:10px;padding:10px 12px;margin:0 0 12px;font-size:15px}
+  .tb{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);font-size:12.5px;line-height:1.5;border-radius:10px;padding:12px 0;overflow:auto}
+  .tb .plain{display:block;white-space:pre;padding:0 14px}
+  .tb button.frame{display:block;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;color:inherit;font:inherit;white-space:pre-wrap;overflow-wrap:anywhere;padding:2px 11px 2px 30px;text-indent:-16px;cursor:pointer}
+  .tb button.frame:hover{background:rgba(255,255,255,.06)}
+  .tb button.frame.mine .path{color:#93C5FD}
+  .tb button.frame.sel{background:rgba(250,204,21,.16);border-left-color:#FACC15}
+  .tb button.frame.right{background:rgba(74,222,128,.16);border-left-color:#4ADE80}
+  .tb button.frame.wrong{background:rgba(248,113,113,.18);border-left-color:#F87171}
+  .tb .err{display:block;white-space:pre-wrap;padding:6px 14px 0;color:#FCA5A5;font-weight:600}
+  .tb .code-line{color:#E5E7EB}
+  .choices{display:grid;gap:8px;margin:8px 0 0}
+  .choice{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;cursor:pointer;text-align:left;font:inherit;font-size:15px;color:var(--ink)}
+  .choice:hover{border-color:#C9CED6}
+  .choice.sel{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+  .choice.right{border-color:#86D19F;background:var(--ok-soft)}
+  .choice.wrong{border-color:#F5A3A3;background:var(--bad-soft)}
+  .choice .k{font-weight:700;color:var(--muted);min-width:18px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+  .tips li{margin-bottom:8px}
+  .review td{vertical-align:top}
+
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="au-logo" href="https://github.com/AU-Extension" target="_blank" rel="noopener" aria-label="Atlantis University">
+      <img src="https://raw.githubusercontent.com/AU-Extension/items/main/aulogo1.png" alt="Atlantis University">
+    </a>
+    <div class="crumb"><b>EGN 475</b> Software Prototyping · Week 7 · Interactive B</div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Week 7 · Challenge</span>
+    <h1>Traceback debugging challenge</h1>
+    <p class="lede">A traceback looks scary, but it follows a pattern. Read the last line to learn what went wrong, then find the last frame inside your own project to learn where. Ten real error screens, ten points each.</p>
+  </section>
+  <details class="howto card">
+    <summary>How to use this interactive</summary>
+    <ol><li>Read the situation: what the user did when the error appeared.</li><li>Step 1: click the frame that points to the line you need to fix. Frames from <code>.venv</code> belong to Flask and other libraries, not to you.</li><li>Step 2: choose the cause and the fix.</li><li>Press <b>Check</b> to see the explanation, then <b>Next</b>. The frame is worth 4 points and the fix 6 points.</li><li>Some long library frames are shortened to keep the screen readable. Your own frames are shown exactly.</li></ol>
+  </details>
+
+  <div class="layout">
+    <section class="card" id="game">
+      <div class="progress" id="progress" aria-hidden="true"></div>
+      <div class="score" style="margin-bottom:8px"><span id="qnum"></span><span class="pill" id="optTag"></span><span style="margin-left:auto">Score <span class="big" id="score">0</span>/100</span></div>
+      <h2 id="qtitle"></h2>
+      <div class="situation" id="situation"></div>
+      <h3>Step 1: click the frame that points to your mistake</h3>
+      <div class="tb" id="tb" role="group" aria-label="Traceback"></div>
+      <h3 style="margin-top:16px">Step 2: what is the cause and the fix?</h3>
+      <div class="choices" id="choices"></div>
+      <div class="actions">
+        <button class="btn primary" id="checkBtn" disabled>Check</button>
+        <button class="btn" id="nextBtn" hidden>Next</button>
+        <span id="hint" style="font-size:14px;color:var(--muted)">Choose a frame and a fix first.</span>
+      </div>
+      <div id="feedback"></div>
+    </section>
+    <section class="card" id="final" hidden>
+      <h2>Your result</h2>
+      <p class="score"><span class="big" id="finalScore"></span><span id="finalMsg"></span></p>
+      <div class="scroll-x"><table class="data review" id="review"></table></div>
+      <div class="actions"><button class="btn primary" id="againBtn">Try again</button></div>
+    </section>
+    <aside class="card">
+      <h2>How to read a traceback</h2>
+      <ol class="tips">
+        <li>Start at the <b>bottom</b>. The last line names the exception and gives the message.</li>
+        <li>Read the frames from the bottom up and find the <b>last frame in your project folder</b>: <code>app.py</code>, <code>db.py</code> or a file in <code>templates</code>.</li>
+        <li>Frames inside <code>.venv\Lib\site-packages</code> are Flask, Jinja or Werkzeug. The bug is almost never there.</li>
+        <li>The line printed under your frame is the line to inspect. Ask: which value here is not what I expected?</li>
+        <li>If you ask Copilot Chat for help, paste the whole traceback and the code around your frame. Then check its answer against these steps.</li>
+      </ol>
+    </aside>
+  </div>
+
+</main>
+<footer class="foot">Atlantis University · School of Information Technology · EGN 475 Software Prototyping</footer>
+<script>
+const hasGSAP = typeof window.gsap !== 'undefined';
+
+const P = 'C:\\Users\\student\\egn475-cafe-perez\\';
+const S = 'C:\\Users\\student\\egn475-salon-garcia\\';
+const V = root => root + '.venv\\Lib\\site-packages\\';
+const F = (path, line, fn, code, mine=false, ok=false) => ({f:`File "${path}", line ${line}, in ${fn}`, c:code, mine, ok});
+const flask = r => [
+  F(V(r)+'flask\\app.py', 1473, 'wsgi_app', 'response = self.full_dispatch_request()'),
+  F(V(r)+'flask\\app.py', 880, 'full_dispatch_request', 'rv = self.dispatch_request()'),
+  F(V(r)+'flask\\app.py', 865, 'dispatch_request', 'return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)')
+];
+const render = r => [
+  F(V(r)+'flask\\templating.py', 150, 'render_template', 'return _render(app, template, context)'),
+  F(V(r)+'flask\\templating.py', 131, '_render', 'rv = template.render(context)'),
+  F(V(r)+'jinja2\\environment.py', 1304, 'render', 'self.environment.handle_exception()'),
+  F(V(r)+'jinja2\\environment.py', 939, 'handle_exception', 'raise rewrite_traceback_stack(source=source)')
+];
+
+const ITEMS = [
+ {title:'The order form crashes on submit', opt:'A',
+  situation:'A customer fills in the order form and presses <b>Place order</b>. The page shows 400 Bad Request, and debug mode prints this traceback.',
+  frames:[...flask(P), F(P+'app.py', 42, 'create_order', 'quantity = int(request.form["quantity"])', true, true),
+          F(V(P)+'werkzeug\\datastructures\\structures.py', 196, '__getitem__', 'raise exceptions.BadRequestKeyError(key)')],
+  err:["werkzeug.exceptions.BadRequestKeyError: 400 Bad Request: The browser (or proxy) sent a request that this server could not understand.", "KeyError: 'quantity'"],
+  choices:[
+   ['The form never sent a field called quantity. In the template the input is probably named "qty". Make the name attributes match, and read optional values with request.form.get().', true],
+   ['Werkzeug is broken. Reinstall it with pip.', false],
+   ['The orders table has no quantity column. Run init-db again.', false],
+   ['The route is missing methods=["POST"].', false]],
+  explain:'request.form["quantity"] raises a KeyError when the browser sent no field with that name. The bottom line tells you the missing key. The fix lives in your template (the input name) or in app.py line 42, not in Werkzeug.'},
+ {title:'The services page will not render', opt:'B',
+  situation:'You added prices to the services page. Opening <code>/</code> now shows an Internal Server Error.',
+  frames:[...flask(S), F(S+'app.py', 18, 'services_page', 'return render_template("services.html", services=services)', true), ...render(S),
+          F(S+'templates\\services.html', 1, 'top-level template code', '{% extends "base.html" %}', true),
+          F(S+'templates\\base.html', 21, 'top-level template code', '{% block content %}{% endblock %}', true),
+          F(S+'templates\\services.html', 9, "block 'content'", '<td>${{ "%.2f"|format(service.price_cent / 100) }}</td>', true, true),
+          F(V(S)+'jinja2\\runtime.py', 852, '_fail_with_undefined_error', 'raise self._undefined_exception(self._undefined_message)')],
+  err:["jinja2.exceptions.UndefinedError: 'sqlite3.Row object' has no attribute 'price_cent'"],
+  choices:[
+   ['A typo in the template: the column is price_cents, not price_cent. Fix line 9 of services.html.', true],
+   ['services was not passed to render_template. Add services=services.', false],
+   ['base.html is missing the content block.', false],
+   ['Prices must be stored as REAL in SQLite. Change the column type.', false]],
+  explain:'Several frames are yours, but the last one is services.html line 9, inside the content block. The message says the row has no attribute price_cent: the column name in schema.sql is price_cents. app.py line 18 is fine, since it already passes services.'},
+ {title:'The menu is empty and the app crashes', opt:'A',
+  situation:'You cloned your repository onto a new computer, installed the requirements and ran the app. The home page crashes immediately.',
+  frames:[...flask(P), F(P+'app.py', 12, 'menu', 'items = db.execute("SELECT * FROM menu_items WHERE available = 1").fetchall()', true, true)],
+  err:['sqlite3.OperationalError: no such table: menu_items'],
+  choices:[
+   ['The new database file has no tables yet. Run the init command (flask --app app init-db) so schema.sql creates them.', true],
+   ['sqlite3 is not installed. Run pip install sqlite3.', false],
+   ['fetchall() should be fetchone().', false],
+   ['The table should be named menu. Rename it in the query.', false]],
+  explain:'"no such table" means SQLite opened a database file that does not contain the table. A fresh clone has no database (the .db file is not committed), so schema.sql must run first. sqlite3 is part of Python and is never installed with pip.'},
+ {title:'An old link breaks the appointment page', opt:'B',
+  situation:'A client opens an old bookmark: <code>/appointments/999</code>. That appointment was deleted last week.',
+  frames:[...flask(S), F(S+'app.py', 57, 'appointment_detail', 'if appt["status"] == "canceled":', true, true)],
+  err:["TypeError: 'NoneType' object is not subscriptable"],
+  choices:[
+   ['fetchone() returned None because no row has id 999. Check for None first and call abort(404).', true],
+   ['The status column is missing. Add it to schema.sql.', false],
+   ['Use appt.status instead of appt["status"].', false],
+   ['The route needs <int:appointment_id> instead of <appointment_id>.', false]],
+  explain:'"NoneType object is not subscriptable" means the code used [ ] on None. When no row matches, fetchone() returns None. Real users follow stale links, so every detail page needs: if appt is None: abort(404).'},
+ {title:'Every page crashes after renaming a function', opt:'A',
+  situation:'Copilot helped you rename the view function <code>orders</code> to <code>order_list</code>. Now every page shows an error.',
+  frames:[...flask(P), F(P+'app.py', 15, 'menu', 'return render_template("index.html", items=items)', true), ...render(P),
+          F(P+'templates\\index.html', 1, 'top-level template code', '{% extends "base.html" %}', true),
+          F(P+'templates\\base.html', 14, 'top-level template code', '<a href="{{ url_for(\'orders\') }}">My orders</a>', true, true),
+          F(V(P)+'flask\\app.py', 1121, 'url_for', 'return self.handle_url_build_error(error, endpoint, values)'),
+          F(V(P)+'werkzeug\\routing\\map.py', 924, 'build', 'raise BuildError(endpoint, values, method, self)')],
+  err:["werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'orders'. Did you mean 'order_list' instead?"],
+  choices:[
+   ["url_for() uses the view function name. Change base.html line 14 to url_for('order_list').", true],
+   ['Add @app.route("/orders") back above the function.', false],
+   ['Restart the server so Flask forgets the old name.', false],
+   ['url_for() needs the full URL: url_for("/orders").', false]],
+  explain:'base.html is shared by every page, which is why everything broke. url_for() takes the endpoint (the function name), and Werkzeug even suggests the right one. Search your templates for the old name after any rename.'},
+ {title:'Registering a second account crashes', opt:'B',
+  situation:'Two clients try to register with the same username, <code>maria</code>. The second one sees an Internal Server Error.',
+  frames:[...flask(S), F(S+'app.py', 88, 'register', 'db.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", (username, generate_password_hash(password), "client"))', true, true)],
+  err:['sqlite3.IntegrityError: UNIQUE constraint failed: users.username'],
+  choices:[
+   ['The database correctly refused a duplicate username. Catch the IntegrityError and show "That username is already taken."', true],
+   ['Remove UNIQUE from the username column in schema.sql.', false],
+   ['generate_password_hash() produced the same hash twice.', false],
+   ['Change the query to use string formatting instead of ? placeholders.', false]],
+  explain:'The UNIQUE constraint is doing its job. Removing it would allow two accounts called maria. The app must expect the error: wrap the insert in try / except db.IntegrityError and flash a friendly message. This is the pattern in the official Flask tutorial.'},
+ {title:'The form says Method Not Allowed', opt:'A',
+  situation:'You moved the order form into its own route. Pressing <b>Place order</b> now shows a page that says <i>Method Not Allowed: The method is not allowed for the requested URL.</i> There is no traceback, only this line in the terminal and your route code.',
+  custom:[
+   {plain:'Terminal:'},
+   {f:'127.0.0.1 - - [05/Nov/2026 10:15:32] "POST /orders/new HTTP/1.1" 405 -', c:null},
+   {plain:' '},
+   {plain:'app.py:'},
+   {f:'@app.route("/orders/new")', c:null, mine:true, ok:true},
+   {f:'@login_required', c:null, mine:true},
+   {f:'def create_order():', c:null, mine:true}],
+  err:['405 Method Not Allowed'],
+  choices:[
+   ['@app.route() accepts only GET by default. Add methods=["GET", "POST"] (or split it into @app.get and @app.post).', true],
+   ['The user is not logged in. Remove @login_required.', false],
+   ['The URL is wrong. Rename it to /orders/create.', false],
+   ['405 means the server crashed. Read the traceback in the terminal.', false]],
+  explain:'Status 405 is not a crash: Flask found the URL but the route does not accept POST. The route decorator is the line to fix. Copilot often drafts a GET route first and forgets the POST half.'},
+ {title:'The booking form page cannot be found', opt:'B',
+  situation:'You created the booking form template and opened <code>/appointments/new</code>. Flask says it cannot find the template, but the file is right there in VS Code.',
+  frames:[...flask(S), F(S+'app.py', 24, 'book_form', 'return render_template("appointments/new.html", services=services)', true, true),
+          F(V(S)+'flask\\templating.py', 149, 'render_template', 'template = app.jinja_env.get_or_select_template(template_name_or_list)'),
+          F(V(S)+'jinja2\\environment.py', 1084, 'get_or_select_template', 'return self.get_template(template_name_or_list, parent, globals)'),
+          F(V(S)+'jinja2\\environment.py', 1013, 'get_template', 'return self._load_template(name, globals)'),
+          F(V(S)+'jinja2\\loaders.py', 126, 'load', 'source, filename, uptodate = self.get_source(environment, name)'),
+          F(V(S)+'flask\\templating.py', 99, '_get_source_fast', 'raise TemplateNotFound(template)')],
+  err:['jinja2.exceptions.TemplateNotFound: appointments/new.html'],
+  choices:[
+   ['Flask looks in a folder named templates next to app.py. The file was saved as template\\appointments\\new.html (or in the wrong subfolder). Move it.', true],
+   ['Jinja2 is not installed. Run pip install jinja2.', false],
+   ['render_template() needs the full Windows path to the file.', false],
+   ['Rename the file to new.htm.', false]],
+  explain:'TemplateNotFound prints the exact path Flask searched for, relative to the templates folder. Compare it letter by letter with your real folder: templates (plural), then appointments, then new.html.'},
+ {title:'Moving an order to the next status crashes', opt:'A',
+  situation:'On the kitchen board, staff press <b>Mark ready</b>. The app crashes instead of updating the order.',
+  frames:[...flask(P), F(P+'app.py', 66, 'update_status', 'db.execute("UPDATE orders SET status = ? WHERE id = ? AND status = ?", (new_status, order_id))', true, true)],
+  err:['sqlite3.ProgrammingError: Incorrect number of bindings supplied. The current statement uses 3, and there are 2 supplied.'],
+  choices:[
+   ['The SQL has three ? placeholders but only two values. Add the old status to the tuple: (new_status, order_id, old_status).', true],
+   ['Replace the ? placeholders with an f-string.', false],
+   ['The orders table is locked. Restart the app.', false],
+   ['Staff are not allowed to update orders.', false]],
+  explain:'Count the question marks and count the values: they must match, in the same order. Never switch to an f-string: placeholders are what protect the query from SQL injection.'},
+ {title:'Booking without choosing a service crashes', opt:'B',
+  situation:'A client presses <b>Book</b> without choosing a service. The first option in the list is "Choose a service" with value="".',
+  frames:[...flask(S), F(S+'app.py', 31, 'book_appointment', 'service_id = int(request.form["service_id"])', true, true)],
+  err:["ValueError: invalid literal for int() with base 10: ''"],
+  choices:[
+   ['int("") fails on an empty value. Read it with request.form.get("service_id", type=int), which gives None, then show a validation error.', true],
+   ['The services table is empty. Add seed data.', false],
+   ['Make the select element required in HTML, and nothing else needs to change.', false],
+   ["Use float() instead of int().", false]],
+  explain:"The message shows the value that failed: an empty string. HTML required helps, but anyone can bypass the browser, so the server must validate too. request.form.get(..., type=int) returns None for bad input instead of crashing."}
+];
+
+let order = [], idx = 0, score = 0, results = [], selFrame = null, selChoice = null, checked = false;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function shuffle(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function start(){
+  order = ITEMS.map((it, i) => ({...it, shuffled: shuffle(it.choices.map((c, k) => ({text: c[0], ok: c[1], k})))}));
+  idx = 0; score = 0; results = [];
+  $('#game').hidden = false; $('#final').hidden = true;
+  show();
+}
+
+function progress(){
+  $('#progress').innerHTML = order.map((_, i) => {
+    let c = '';
+    if (i < results.length) c = results[i].pts === 10 ? 'ok' : results[i].pts > 0 ? 'part' : 'bad';
+    else if (i === idx) c = 'cur';
+    return `<span class="${c}"></span>`;
+  }).join('');
+}
+
+function show(){
+  const it = order[idx];
+  selFrame = null; selChoice = null; checked = false;
+  $('#qnum').textContent = `Error ${idx + 1} of ${order.length}`;
+  $('#optTag').textContent = it.opt === 'A' ? 'Option A · Café' : 'Option B · Salon';
+  $('#qtitle').textContent = it.title;
+  $('#situation').innerHTML = it.situation;
+  $('#score').textContent = score;
+  let html = '';
+  if (it.custom){
+    it.custom.forEach((l, i) => {
+      if (l.plain) html += `<span class="plain">${esc(l.plain)}</span>`;
+      else html += `<button class="frame${l.mine ? ' mine' : ''}" data-i="${i}"><span class="${l.mine ? 'code-line' : 'path'}">  ${esc(l.f)}</span></button>`;
+    });
+  } else {
+    html += '<span class="plain">Traceback (most recent call last):</span>';
+    it.frames.forEach((fr, i) => {
+      html += `<button class="frame${fr.mine ? ' mine' : ''}" data-i="${i}"><span class="path">  ${esc(fr.f)}</span>\n<span class="code-line">    ${esc(fr.c)}</span></button>`;
+    });
+  }
+  html += `<span class="err">${it.err.map(esc).join('\n')}</span>`;
+  $('#tb').innerHTML = html;
+  document.querySelectorAll('#tb button.frame').forEach(b => b.addEventListener('click', () => {
+    if (checked) return;
+    document.querySelectorAll('#tb button.frame').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel'); selFrame = +b.dataset.i; ready();
+  }));
+  $('#choices').innerHTML = it.shuffled.map((c, i) => `<button class="choice" data-i="${i}"><span class="k">${'ABCD'[i]}</span><span>${esc(c.text)}</span></button>`).join('');
+  document.querySelectorAll('#choices .choice').forEach(b => b.addEventListener('click', () => {
+    if (checked) return;
+    document.querySelectorAll('#choices .choice').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel'); selChoice = +b.dataset.i; ready();
+  }));
+  $('#feedback').innerHTML = '';
+  $('#checkBtn').disabled = true; $('#checkBtn').hidden = false; $('#nextBtn').hidden = true;
+  $('#hint').textContent = 'Choose a frame and a fix first.';
+  progress();
+  if (hasGSAP) gsap.from('#game h2, #situation, #tb', {opacity: 0, y: 6, duration: .3, stagger: .05});
+}
+function ready(){ const ok = selFrame !== null && selChoice !== null; $('#checkBtn').disabled = !ok; $('#hint').textContent = ok ? '' : 'Choose a frame and a fix first.'; }
+
+function check(){
+  const it = order[idx]; checked = true;
+  const lines = it.custom || it.frames;
+  const frameOk = !!(lines[selFrame] && lines[selFrame].ok);
+  const fixOk = it.shuffled[selChoice].ok;
+  const pts = (frameOk ? 4 : 0) + (fixOk ? 6 : 0);
+  score += pts; results.push({title: it.title, pts, frameOk, fixOk});
+  document.querySelectorAll('#tb button.frame').forEach(b => {
+    const l = lines[+b.dataset.i];
+    if (l.ok) b.classList.add('right');
+    else if (+b.dataset.i === selFrame) b.classList.add('wrong');
+  });
+  document.querySelectorAll('#choices .choice').forEach(b => {
+    const c = it.shuffled[+b.dataset.i];
+    if (c.ok) b.classList.add('right'); else if (+b.dataset.i === selChoice) b.classList.add('wrong');
+  });
+  const cls = pts === 10 ? 'ok' : pts > 0 ? 'info' : 'bad';
+  const head = pts === 10 ? 'Both right, 10 points.' : `${frameOk ? 'Frame right' : 'Frame wrong'}, ${fixOk ? 'fix right' : 'fix wrong'}: ${pts} points.`;
+  $('#feedback').innerHTML = `<div class="feedback ${cls}"><b>${head}</b> ${esc(it.explain)}</div>`;
+  $('#score').textContent = score;
+  $('#checkBtn').hidden = true; $('#nextBtn').hidden = false;
+  $('#nextBtn').textContent = idx === order.length - 1 ? 'See my result' : 'Next';
+  $('#nextBtn').focus();
+  progress();
+}
+
+function next(){
+  if (idx < order.length - 1){ idx++; show(); return; }
+  $('#game').hidden = true; $('#final').hidden = false;
+  $('#finalScore').textContent = score + '/100';
+  $('#finalMsg').textContent = score >= 90 ? 'Excellent. You read tracebacks like a developer.' : score >= 70 ? 'Good work. Review the errors you missed below.' : 'Keep practicing: start at the bottom line, then find your last frame.';
+  $('#review').innerHTML = '<tr><th>Error</th><th>Frame</th><th>Fix</th><th>Points</th></tr>' + results.map(r => `<tr><td>${esc(r.title)}</td><td>${r.frameOk ? 'Right' : 'Missed'}</td><td>${r.fixOk ? 'Right' : 'Missed'}</td><td>${r.pts}</td></tr>`).join('');
+  $('#final').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+$('#checkBtn').addEventListener('click', check);
+$('#nextBtn').addEventListener('click', next);
+$('#againBtn').addEventListener('click', start);
+start();
+
+</script>
+</body>
+</html>
